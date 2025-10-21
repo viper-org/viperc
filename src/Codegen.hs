@@ -72,6 +72,11 @@ codegenFuncDef (FunctionDef returnType name body) = mdo
             _ <- L.block `L.named` "entry"
             mapM_ codegenNode body
 
+codegenNodeLVal :: ASTNode -> Builder CodegenOperand
+codegenNodeLVal (ASTVariableExpression ident) = do
+    var <- getLocal ident
+    pure(Some(var))
+
 codegenNode :: ASTNode -> Builder CodegenOperand
 codegenNode (ASTReturnStatement value) = case value of
     ASTNothing -> do
@@ -102,6 +107,18 @@ codegenNode (ASTVariableExpression name) = do
     var <- getLocal name
     l <- L.load var 0
     pure(Some(l))
+
+codegenNode (ASTBinaryExpression l BinaryAssign r) = do
+    left <- codegenNodeLVal l
+    right <- codegenNode r
+    case left of
+            None -> error "unexpected node in binary expression" -- todo: better error
+            Some (left') -> do
+                case right of
+                    None -> error "unexpected node in binary expression" -- todo: better error
+                    Some (right') -> do
+                        L.store left' 0 right'
+                        pure(None) -- Maybe create a load?
 
 codegenNode (ASTBinaryExpression l op r) = do
         left <- codegenNode l

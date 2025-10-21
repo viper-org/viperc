@@ -10,6 +10,7 @@ type Right = ASTNode
 type Callee = ASTNode
 
 data BinaryOperator = BinaryAdd | BinarySub | BinaryMul | BinaryDiv
+                    | BinaryAssign
     deriving (Eq, Show)
 
 data ASTNode = ASTNothing
