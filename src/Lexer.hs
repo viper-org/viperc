@@ -13,6 +13,7 @@ data Token = None
     | TokenReturnKeyword
     | TokenIntegerLiteral String
     | TokenSemicolon
+    | TokenComma
     | TokenEqual
     | TokenPlus
     | TokenMinus
@@ -45,6 +46,7 @@ tokenize (')':rest) = TokenRightParen : tokenize rest
 tokenize ('{':rest) = TokenLeftBrace : tokenize rest
 tokenize ('}':rest) = TokenRightBrace : tokenize rest
 tokenize (';':rest) = TokenSemicolon : tokenize rest
+tokenize (',':rest) = TokenComma : tokenize rest
 tokenize ('=':rest) = TokenEqual : tokenize rest
 tokenize ('+':rest) = TokenPlus : tokenize rest
 tokenize ('-':rest) = TokenMinus : tokenize rest

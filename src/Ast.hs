@@ -25,5 +25,6 @@ data ASTNode = ASTNothing
 data FunctionDef = FunctionDef {
     returnType :: Type,
     name :: String,
+    args :: [(Type, String)],
     body :: [ASTNode]
 } deriving (Eq, Show)

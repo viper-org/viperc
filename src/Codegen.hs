@@ -15,6 +15,8 @@ import Data.List
 import Data.Map as Map
 import Data.Monoid ((<>))
 import Data.String
+import qualified Data.ByteString.Char8 as BS
+import qualified Data.ByteString.Short as SBS
 import Data.String.Conversions (cs)
 import Data.Word
 import LLVM.AST
@@ -52,6 +54,9 @@ getLocal s = do
         Just var -> pure var
         Nothing -> error ("'" ++ s ++ "' does not exist in this scope") -- todo: proper error
 
+mTypeToLLVM :: MonadState Scope m => Types.Type -> m AST.Type
+mTypeToLLVM ty = pure $ typeToLLVM ty
+
 codegenFile :: [FunctionDef] -> AST.Module
 codegenFile decls =
     flip evalState (Scope{locals = Map.empty}) $
@@ -59,18 +64,27 @@ codegenFile decls =
             mapM_ codegenFuncDef decls
 
 codegenFuncDef :: FunctionDef -> LLVM ()
-codegenFuncDef (FunctionDef returnType name body) = mdo
+codegenFuncDef (FunctionDef returnType name args body) = mdo
     addLocal name funct
     scope <- get
+    let parms = [generateParm type' name' | (type', name') <- args]
     funct <- do
-        L.function (AST.mkName $ cs name) [] (typeToLLVM returnType) emitBody
+        L.function (AST.mkName $ cs name) parms (typeToLLVM returnType) emitBody
     put scope
     pure()
 
     where
-        emitBody z = do
+        generateParm type' name' = ((typeToLLVM type'), ParameterName (SBS.toShort (BS.pack name')))
+        emitBody paramOps = do
             _ <- L.block `L.named` "entry"
+            mapM_ initParam (zip args paramOps)
             mapM_ codegenNode body
+
+            where
+                initParam ((type', name'), parmOp) = do
+                    alloca <- L.alloca (typeToLLVM type') Nothing 0
+                    L.store alloca 0 parmOp
+                    addLocal name' alloca
 
 codegenNodeLVal :: ASTNode -> Builder CodegenOperand
 codegenNodeLVal (ASTVariableExpression ident) = do

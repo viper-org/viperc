@@ -72,16 +72,44 @@ parseFile = do
             pure (curr : rest)
         _ -> pure []
 
+parseParams :: Parser [(Type, String)]
+parseParams = do
+    tok <- currentTok
+    case tok of
+        Just TokenRightParen -> pure []
+        _ -> do
+            parm <- parseParam
+            rest <- parseMore
+            pure (parm : rest)
+
+        where
+            parseMore = do
+                tok <- currentTok
+                case tok of
+                    Just TokenComma -> do
+                        _ <- consumeTok
+                        parm <- parseParam
+                        rest <- parseMore
+                        pure (parm : rest)
+                    _ -> pure []
+
+parseParam :: Parser (Type, String)
+parseParam = do
+    (TokenTypeKeyword typeName) <- satisfyToken isType
+    (TokenIdentifier  parmName) <- satisfyToken isIdentifier
+    pure ((parseType typeName), parmName)
+
 parseFunction :: Parser FunctionDef
 parseFunction = do
     (TokenTypeKeyword typeName) <- satisfyToken isType
     TokenIdentifier name <- satisfyToken isIdentifier
     _ <- expectToken TokenLeftParen
+    parms <- parseParams
     _ <- expectToken TokenRightParen
     _ <- expectToken TokenLeftBrace
     body <- parseBody
     _ <- expectToken TokenRightBrace
-    pure (FunctionDef (parseType typeName) name body)
+    pure (FunctionDef (parseType typeName) name parms body)
 
     where
         parseBody = do
