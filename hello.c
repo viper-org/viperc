@@ -1,4 +1,6 @@
 int main() {
+    int x = 3;
+    int z = 45;
     return 1;
 }
 

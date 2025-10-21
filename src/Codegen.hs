@@ -68,4 +68,15 @@ codegenNode (ASTReturnStatement value) = case value of
             Some (x) -> L.ret x
         pure (None)
 
+codegenNode (ASTVariableDeclaration name initVal) = do
+    alloca <- L.alloca AST.i32 Nothing 0
+    case initVal of
+        ASTNothing -> pure(None)
+        val -> do
+            x <- codegenNode val
+            case x of
+                None -> error "unexpected node in variable decl" -- todo: proper error
+                Some (v) -> L.store alloca 0 v
+            pure (None)
+
 codegenNode (ASTIntegerLiteral value) = pure (Some(L.int32 (fromIntegral value)))

@@ -2,10 +2,13 @@ module Parser where
 
 import Lexer
 
+type Name = String
 type ReturnValue = ASTNode
+type InitialValue = ASTNode
 
 data ASTNode = ASTNothing
              | ASTReturnStatement ReturnValue
+             | ASTVariableDeclaration Name InitialValue
              | ASTIntegerLiteral Int
              deriving (Eq, Show)
 
@@ -104,6 +107,7 @@ parseExpr = do
             pure (ASTIntegerLiteral (read s :: Int))
 
         Just TokenReturnKeyword -> parseReturnStatement
+        Just TokenIntType -> parseVariableDeclaration
         _ -> Parser $ \s -> Left $ "Expected expression"
 
 parseReturnStatement :: Parser ASTNode
@@ -115,3 +119,15 @@ parseReturnStatement = do
         _ -> do
             value <- parseExpr
             pure (ASTReturnStatement value)
+
+parseVariableDeclaration :: Parser ASTNode
+parseVariableDeclaration = do
+    _ <- expectToken TokenIntType
+    TokenIdentifier name <- satisfyToken isIdentifier
+    tok <- currentTok
+    case tok of
+        Just TokenEqual -> do
+            _ <- consumeTok
+            initVal <- parseExpr
+            pure (ASTVariableDeclaration name initVal)
+        _ -> pure (ASTVariableDeclaration name ASTNothing)
