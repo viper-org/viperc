@@ -96,12 +96,16 @@ parseFunction = do
 
 getBinaryOperatorPrecedence :: Token -> Parser Int
 getBinaryOperatorPrecedence TokenStar = pure(75)
+getBinaryOperatorPrecedence TokenSlash = pure(75)
 getBinaryOperatorPrecedence TokenPlus = pure(70)
+getBinaryOperatorPrecedence TokenMinus = pure(70)
 getBinaryOperatorPrecedence _ = pure(0)
 
 getBinaryOperator :: Token -> Parser BinaryOperator
 getBinaryOperator TokenStar = pure(BinaryMul)
+getBinaryOperator TokenSlash = pure(BinaryDiv)
 getBinaryOperator TokenPlus = pure(BinaryAdd)
+getBinaryOperator TokenMinus = pure(BinarySub)
 getBinaryOperator z = Parser $ \s -> Left $ "unexpected attempt to get binary operator " ++ show z
 
 parseExpr :: Int -> Parser ASTNode

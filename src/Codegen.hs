@@ -115,6 +115,12 @@ codegenNode (ASTBinaryExpression l op r) = do
                             BinaryAdd -> do
                                 op' <- L.add left' right'
                                 pure(Some(op'))
+                            BinarySub -> do
+                                op' <- L.sub left' right'
+                                pure(Some(op'))
                             BinaryMul -> do
                                 op' <- L.mul left' right'
+                                pure(Some(op'))
+                            BinaryDiv -> do
+                                op' <- L.sdiv left' right'
                                 pure(Some(op'))

@@ -8,7 +8,7 @@ type InitialValue = ASTNode
 type Left = ASTNode
 type Right = ASTNode
 
-data BinaryOperator = BinaryAdd | BinaryMul
+data BinaryOperator = BinaryAdd | BinarySub | BinaryMul | BinaryDiv
     deriving (Eq, Show)
 
 data ASTNode = ASTNothing

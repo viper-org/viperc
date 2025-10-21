@@ -15,7 +15,9 @@ data Token = None
     | TokenSemicolon
     | TokenEqual
     | TokenPlus
+    | TokenMinus
     | TokenStar
+    | TokenSlash
     deriving(Eq, Show)
 
 isType :: Token -> Bool
@@ -45,7 +47,9 @@ tokenize ('}':rest) = TokenRightBrace : tokenize rest
 tokenize (';':rest) = TokenSemicolon : tokenize rest
 tokenize ('=':rest) = TokenEqual : tokenize rest
 tokenize ('+':rest) = TokenPlus : tokenize rest
+tokenize ('-':rest) = TokenMinus : tokenize rest
 tokenize ('*':rest) = TokenStar : tokenize rest
+tokenize ('/':rest) = TokenSlash : tokenize rest
 -- Keywords will be transformed afterwards
 tokenize (c:rest) | isAlpha c = TokenIdentifier(c:takeWhile isAlphaNum rest) : tokenize (dropWhile isAlphaNum rest)
                   | isDigit c = TokenIntegerLiteral(c:takeWhile isDigit rest) : tokenize (dropWhile isDigit rest)
