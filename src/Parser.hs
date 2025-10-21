@@ -63,6 +63,16 @@ expectToken z = do
     if t == z then pure ()
     else Parser $ \s -> Left $ "expected " ++ show z ++ ", found " ++ show t -- Todo: better error
 
+parseFile :: Parser [FunctionDef]
+parseFile = do
+    tok <- currentTok
+    case tok of
+        Just TokenIntType -> do
+            curr <- parseFunction
+            rest <- parseFile
+            pure (curr : rest)
+        _ -> pure []
+
 parseFunction :: Parser FunctionDef
 parseFunction = do
     _ <- expectToken TokenIntType

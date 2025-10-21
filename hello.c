@@ -1,5 +1,5 @@
 int main() {
     return 1;
-    2;
-    return;
 }
+
+int main2() {return 6;}
