@@ -6,6 +6,7 @@
 module Codegen where
 
 import Parser
+import Types
 
 import Control.Applicative
 import Control.Monad.State
@@ -58,10 +59,10 @@ codegenFile decls =
             mapM_ codegenFuncDef decls
 
 codegenFuncDef :: FunctionDef -> LLVM ()
-codegenFuncDef (FunctionDef name body) = mdo
+codegenFuncDef (FunctionDef returnType name body) = mdo
     scope <- get
     funct <- do
-        L.function (AST.mkName $ cs name) [] AST.i32 emitBody
+        L.function (AST.mkName $ cs name) [] (typeToLLVM returnType) emitBody
     put scope
     pure()
 
@@ -82,8 +83,8 @@ codegenNode (ASTReturnStatement value) = case value of
             Some (x) -> L.ret x
         pure (None)
 
-codegenNode (ASTVariableDeclaration name initVal) = do
-    alloca <- L.alloca AST.i32 Nothing 0
+codegenNode (ASTVariableDeclaration type' name initVal) = do
+    alloca <- L.alloca (typeToLLVM type') Nothing 0
     addLocal name alloca
     case initVal of
         ASTNothing -> pure(None)

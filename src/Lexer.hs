@@ -4,7 +4,7 @@ import Data.Char
 
 data Token = None
     | TokenError(Char)
-    | TokenIntType
+    | TokenTypeKeyword String
     | TokenIdentifier String
     | TokenLeftParen
     | TokenRightParen
@@ -17,7 +17,7 @@ data Token = None
     deriving(Eq, Show)
 
 isType :: Token -> Bool
-isType TokenIntType = True
+isType (TokenTypeKeyword _) = True
 isType _ = False
 
 isIdentifier :: Token -> Bool
@@ -26,7 +26,11 @@ isIdentifier _ = False;
 
 assignKeywords :: [Token] -> [Token]
 assignKeywords [] = []
-assignKeywords ((TokenIdentifier "int"):xs) = TokenIntType : assignKeywords xs
+assignKeywords ((TokenIdentifier "char"):xs)   = TokenTypeKeyword ("char")  : assignKeywords xs
+assignKeywords ((TokenIdentifier "short"):xs)  = TokenTypeKeyword ("short") : assignKeywords xs
+assignKeywords ((TokenIdentifier "int"):xs)    = TokenTypeKeyword ("int")   : assignKeywords xs
+assignKeywords ((TokenIdentifier "long"):xs)   = TokenTypeKeyword ("long")  : assignKeywords xs
+assignKeywords ((TokenIdentifier "void"):xs)   = TokenTypeKeyword ("void")  : assignKeywords xs
 assignKeywords ((TokenIdentifier "return"):xs) = TokenReturnKeyword : assignKeywords xs
 assignKeywords (x:xs) = x : assignKeywords xs
 

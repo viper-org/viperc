@@ -1,6 +1,7 @@
 module Parser where
 
 import Lexer
+import Types
 
 type Name = String
 type ReturnValue = ASTNode
@@ -8,12 +9,13 @@ type InitialValue = ASTNode
 
 data ASTNode = ASTNothing
              | ASTReturnStatement ReturnValue
-             | ASTVariableDeclaration Name InitialValue
+             | ASTVariableDeclaration Type Name InitialValue
              | ASTIntegerLiteral Int
              | ASTVariableExpression Name
              deriving (Eq, Show)
 
 data FunctionDef = FunctionDef {
+    returnType :: Type,
     name :: String,
     body :: [ASTNode]
 } deriving (Eq, Show)
@@ -67,11 +69,18 @@ expectToken z = do
     if t == z then pure ()
     else Parser $ \s -> Left $ "expected " ++ show z ++ ", found " ++ show t -- Todo: better error
 
+parseType :: String -> Type
+parseType "char"  = CharType
+parseType "short" = ShortType
+parseType "int"   = IntType
+parseType "long"  = LongType
+parseType "void"  = VoidType
+
 parseFile :: Parser [FunctionDef]
 parseFile = do
     tok <- currentTok
     case tok of
-        Just TokenIntType -> do
+        Just (TokenTypeKeyword _) -> do
             curr <- parseFunction
             rest <- parseFile
             pure (curr : rest)
@@ -79,14 +88,14 @@ parseFile = do
 
 parseFunction :: Parser FunctionDef
 parseFunction = do
-    _ <- expectToken TokenIntType
+    (TokenTypeKeyword typeName) <- satisfyToken isType
     TokenIdentifier name <- satisfyToken isIdentifier
     _ <- expectToken TokenLeftParen
     _ <- expectToken TokenRightParen
     _ <- expectToken TokenLeftBrace
     body <- parseBody
     _ <- expectToken TokenRightBrace
-    pure (FunctionDef name body)
+    pure (FunctionDef (parseType typeName) name body)
 
     where
         parseBody = do
@@ -112,7 +121,7 @@ parseExpr = do
             pure (ASTVariableExpression s)
 
         Just TokenReturnKeyword -> parseReturnStatement
-        Just TokenIntType -> parseVariableDeclaration
+        Just (TokenTypeKeyword _) -> parseVariableDeclaration
         _ -> Parser $ \s -> Left $ "Expected expression"
 
 parseReturnStatement :: Parser ASTNode
@@ -127,12 +136,13 @@ parseReturnStatement = do
 
 parseVariableDeclaration :: Parser ASTNode
 parseVariableDeclaration = do
-    _ <- expectToken TokenIntType
+    (TokenTypeKeyword typeName) <- satisfyToken isType
+    let type' = parseType typeName
     TokenIdentifier name <- satisfyToken isIdentifier
     tok <- currentTok
     case tok of
         Just TokenEqual -> do
             _ <- consumeTok
             initVal <- parseExpr
-            pure (ASTVariableDeclaration name initVal)
-        _ -> pure (ASTVariableDeclaration name ASTNothing)
+            pure (ASTVariableDeclaration type' name initVal)
+        _ -> pure (ASTVariableDeclaration type' name ASTNothing)

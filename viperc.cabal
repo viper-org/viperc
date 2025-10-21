@@ -61,7 +61,7 @@ executable viperc
     main-is:          Main.hs
 
     -- Modules included in this executable, other than Main.
-    other-modules: Lexer, Parser, Codegen
+    other-modules: Lexer, Parser, Codegen, Types
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:

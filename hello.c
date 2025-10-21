@@ -1,9 +1,9 @@
-int main() {
+short main() {
     int x = 3;
-    int z = x;
+    long z = x;
     return z;
 }
 
-int main2() {
-    return z;
+void main2() {
+    return 0;
 }
