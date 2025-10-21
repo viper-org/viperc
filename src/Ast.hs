@@ -8,6 +8,7 @@ type InitialValue = ASTNode
 type Left = ASTNode
 type Right = ASTNode
 type Callee = ASTNode
+type Param = ASTNode
 
 data BinaryOperator = BinaryAdd | BinarySub | BinaryMul | BinaryDiv
                     | BinaryAssign
@@ -19,7 +20,7 @@ data ASTNode = ASTNothing
              | ASTIntegerLiteral Int
              | ASTVariableExpression Name
              | ASTBinaryExpression Left BinaryOperator Right
-             | ASTCallExpression Callee
+             | ASTCallExpression Callee [Param]
              deriving (Eq, Show)
 
 data FunctionDef = FunctionDef {

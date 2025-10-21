@@ -154,8 +154,9 @@ parseExpr prec = do
                     else do
                         _ <- consumeTok
                         if op == TokenLeftParen then do
+                            call <- parseCallExpression l
                             _ <- expectToken TokenRightParen
-                            parseMore (ASTCallExpression l)
+                            parseMore call
                         else do
                             operator <- getBinaryOperator op
                             right <- parseExpr newPrec
@@ -176,6 +177,29 @@ parsePrimary = do
         Just TokenReturnKeyword -> parseReturnStatement
         Just (TokenTypeKeyword _) -> parseVariableDeclaration
         _ -> Parser $ \s -> Left $ "Expected primary expression"
+
+parseCallExpression :: Callee -> Parser ASTNode
+parseCallExpression callee = do
+    tok <- currentTok
+    case tok of
+        Nothing -> Parser $ \s -> Left $ "Expected ')' to match '('"
+        Just TokenRightParen -> pure $ ASTCallExpression callee []
+        _ -> do
+            curr <- parseExpr defaultPrecedence
+            rest <- parseMore
+            pure $ ASTCallExpression callee (curr : rest)
+
+        where
+            parseMore = do
+                tok <- currentTok
+                case tok of
+                    Just TokenRightParen -> pure []
+                    Just TokenComma -> do
+                        _ <- consumeTok
+                        curr <- parseExpr defaultPrecedence
+                        rest <- parseMore
+                        pure (curr : rest)
+                    _ -> Parser $ \s -> Left $ "Expected ')' to match '('"
 
 parseReturnStatement :: Parser ASTNode
 parseReturnStatement = do

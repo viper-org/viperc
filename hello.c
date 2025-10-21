@@ -1,7 +1,10 @@
-int z() {
-    return 3;
+int ident(int x) {
+    return x;
 }
 
+int add(int a, int b) { return a + b; }
+
 int main(int argc) {
-    return argc * 5;
+    int ret = ident(add(argc, 1));
+    return ret;
 }

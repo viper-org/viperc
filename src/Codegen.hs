@@ -157,10 +157,18 @@ codegenNode (ASTBinaryExpression l op r) = do
                                 op' <- L.sdiv left' right'
                                 pure(Some(op'))
 
-codegenNode (ASTCallExpression c) = do
+codegenNode (ASTCallExpression c params) = do
     case c of
         (ASTVariableExpression ident) -> do
             callee <- getLocal ident
-            call' <- L.call callee []
+            params' <- mapM makeParam params
+            call' <- L.call callee params'
             pure(Some(call'))
         _ -> error "unimplemented call expression"
+
+        where
+            makeParam p = do
+                val <- codegenNode p
+                case val of
+                    None -> error "Error" -- todo: better error
+                    Some x -> pure (x,[])
