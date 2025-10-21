@@ -27,5 +27,6 @@ data FunctionDef = FunctionDef {
     returnType :: Type,
     name :: String,
     args :: [(Type, String)],
-    body :: [ASTNode]
+    body :: [ASTNode],
+    prototype :: Bool
 } deriving (Eq, Show)

@@ -106,21 +106,27 @@ parseFunction = do
     _ <- expectToken TokenLeftParen
     parms <- parseParams
     _ <- expectToken TokenRightParen
-    _ <- expectToken TokenLeftBrace
-    body <- parseBody
-    _ <- expectToken TokenRightBrace
-    pure (FunctionDef (parseType typeName) name parms body)
+    tok <- currentTok
+    case tok of
+        Just TokenSemicolon -> do
+            _ <- consumeTok
+            pure (FunctionDef (parseType typeName) name parms [] True)
+        _ -> do
+            _ <- expectToken TokenLeftBrace
+            body <- parseBody
+            _ <- expectToken TokenRightBrace
+            pure (FunctionDef (parseType typeName) name parms body False)
 
-    where
-        parseBody = do
-            tok <- currentTok
-            case tok of
-                Just TokenRightBrace -> pure [] -- end of the function
-                _ -> do
-                    curr <- parseExpr defaultPrecedence
-                    _ <- expectToken TokenSemicolon
-                    rest <- parseBody
-                    pure (curr : rest)
+            where
+                parseBody = do
+                    tok <- currentTok
+                    case tok of
+                        Just TokenRightBrace -> pure [] -- end of the function
+                        _ -> do
+                            curr <- parseExpr defaultPrecedence
+                            _ <- expectToken TokenSemicolon
+                            rest <- parseBody
+                            pure (curr : rest)
 
 getBinaryOperatorPrecedence :: Token -> Parser Int
 getBinaryOperatorPrecedence TokenLeftParen = pure(90)

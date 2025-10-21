@@ -1,6 +1,4 @@
-int ident(int x) {
-    return x;
-}
+int ident(int x);
 
 int add(int a, int b) { return a + b; }
 

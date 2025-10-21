@@ -64,12 +64,13 @@ codegenFile decls =
             mapM_ codegenFuncDef decls
 
 codegenFuncDef :: FunctionDef -> LLVM ()
-codegenFuncDef (FunctionDef returnType name args body) = mdo
+codegenFuncDef (FunctionDef returnType name args body isProto) = mdo
     addLocal name funct
     scope <- get
     let parms = [generateParm type' name' | (type', name') <- args]
-    funct <- do
-        L.function (AST.mkName $ cs name) parms (typeToLLVM returnType) emitBody
+    funct <- case isProto of
+        True -> L.function (AST.mkName $ cs name) parms (typeToLLVM returnType) emitProto
+        False -> L.function (AST.mkName $ cs name) parms (typeToLLVM returnType) emitBody
     put scope
     pure()
 
@@ -85,6 +86,7 @@ codegenFuncDef (FunctionDef returnType name args body) = mdo
                     alloca <- L.alloca (typeToLLVM type') Nothing 0
                     L.store alloca 0 parmOp
                     addLocal name' alloca
+        emitProto _ = pure()
 
 codegenNodeLVal :: ASTNode -> Builder CodegenOperand
 codegenNodeLVal (ASTVariableExpression ident) = do
