@@ -1,9 +1,6 @@
-short main() {
-    int x = 3;
-    long z = x;
-    return z;
-}
-
-void main2() {
-    return 0;
+int main() {
+    int a = 1;
+    int b = 2;
+    int c = 3;
+    return a + b * c;
 }

@@ -11,3 +11,7 @@ typeToLLVM CharType  = AST.i8
 typeToLLVM ShortType = AST.i16
 typeToLLVM IntType   = AST.i32
 typeToLLVM LongType  = AST.i64
+
+isObjectType :: Type -> Bool
+isObjectType VoidType = False
+isObjectType _ = True

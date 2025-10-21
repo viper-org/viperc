@@ -5,7 +5,7 @@
 
 module Codegen where
 
-import Parser
+import AST
 import Types
 
 import Control.Applicative
@@ -101,3 +101,20 @@ codegenNode (ASTVariableExpression name) = do
     var <- getLocal name
     l <- L.load var 0
     pure(Some(l))
+
+codegenNode (ASTBinaryExpression l op r) = do
+        left <- codegenNode l
+        right <- codegenNode r
+        case left of
+            None -> error "unexpected node in binary expression" -- todo: better error
+            Some (left') -> do
+                case right of
+                    None -> error "unexpected node in binary expression" -- todo: better error
+                    Some (right') -> do
+                        case op of
+                            BinaryAdd -> do
+                                op' <- L.add left' right'
+                                pure(Some(op'))
+                            BinaryMul -> do
+                                op' <- L.mul left' right'
+                                pure(Some(op'))

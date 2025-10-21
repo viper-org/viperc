@@ -2,23 +2,9 @@ module Parser where
 
 import Lexer
 import Types
+import AST
 
-type Name = String
-type ReturnValue = ASTNode
-type InitialValue = ASTNode
-
-data ASTNode = ASTNothing
-             | ASTReturnStatement ReturnValue
-             | ASTVariableDeclaration Type Name InitialValue
-             | ASTIntegerLiteral Int
-             | ASTVariableExpression Name
-             deriving (Eq, Show)
-
-data FunctionDef = FunctionDef {
-    returnType :: Type,
-    name :: String,
-    body :: [ASTNode]
-} deriving (Eq, Show)
+defaultPrecedence = 1
 
 data ParserState = ParserState { tokens :: [Token] } deriving (Eq, Show)
 
@@ -103,13 +89,41 @@ parseFunction = do
             case tok of
                 Just TokenRightBrace -> pure [] -- end of the function
                 _ -> do
-                    curr <- parseExpr
+                    curr <- parseExpr defaultPrecedence
                     _ <- expectToken TokenSemicolon
                     rest <- parseBody
                     pure (curr : rest)
 
-parseExpr :: Parser ASTNode
-parseExpr = do
+getBinaryOperatorPrecedence :: Token -> Parser Int
+getBinaryOperatorPrecedence TokenStar = pure(75)
+getBinaryOperatorPrecedence TokenPlus = pure(70)
+getBinaryOperatorPrecedence _ = pure(0)
+
+getBinaryOperator :: Token -> Parser BinaryOperator
+getBinaryOperator TokenStar = pure(BinaryMul)
+getBinaryOperator TokenPlus = pure(BinaryAdd)
+getBinaryOperator z = Parser $ \s -> Left $ "unexpected attempt to get binary operator " ++ show z
+
+parseExpr :: Int -> Parser ASTNode
+parseExpr prec = do
+    left <- parsePrimary
+    parseMore left
+    where
+        parseMore l = do
+            tok <- currentTok
+            case tok of
+                Nothing -> pure(l)
+                Just op -> do
+                    newPrec <- getBinaryOperatorPrecedence op
+                    if newPrec < prec then pure(l)
+                    else do
+                        _ <- consumeTok
+                        operator <- getBinaryOperator op
+                        right <- parseExpr newPrec
+                        parseMore (ASTBinaryExpression l operator right)
+
+parsePrimary :: Parser ASTNode
+parsePrimary = do
     tok <- currentTok
     case tok of
         Just (TokenIntegerLiteral s) -> do
@@ -122,7 +136,7 @@ parseExpr = do
 
         Just TokenReturnKeyword -> parseReturnStatement
         Just (TokenTypeKeyword _) -> parseVariableDeclaration
-        _ -> Parser $ \s -> Left $ "Expected expression"
+        _ -> Parser $ \s -> Left $ "Expected primary expression"
 
 parseReturnStatement :: Parser ASTNode
 parseReturnStatement = do
@@ -131,7 +145,7 @@ parseReturnStatement = do
     case tok of
         Just TokenSemicolon -> pure (ASTReturnStatement ASTNothing)
         _ -> do
-            value <- parseExpr
+            value <- parseExpr defaultPrecedence
             pure (ASTReturnStatement value)
 
 parseVariableDeclaration :: Parser ASTNode
@@ -143,6 +157,6 @@ parseVariableDeclaration = do
     case tok of
         Just TokenEqual -> do
             _ <- consumeTok
-            initVal <- parseExpr
+            initVal <- parseExpr defaultPrecedence
             pure (ASTVariableDeclaration type' name initVal)
         _ -> pure (ASTVariableDeclaration type' name ASTNothing)
