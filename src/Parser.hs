@@ -10,6 +10,7 @@ data ASTNode = ASTNothing
              | ASTReturnStatement ReturnValue
              | ASTVariableDeclaration Name InitialValue
              | ASTIntegerLiteral Int
+             | ASTVariableExpression Name
              deriving (Eq, Show)
 
 data FunctionDef = FunctionDef {
@@ -105,6 +106,10 @@ parseExpr = do
         Just (TokenIntegerLiteral s) -> do
             _ <- consumeTok
             pure (ASTIntegerLiteral (read s :: Int))
+
+        Just (TokenIdentifier s) -> do
+            _ <- consumeTok
+            pure (ASTVariableExpression s)
 
         Just TokenReturnKeyword -> parseReturnStatement
         Just TokenIntType -> parseVariableDeclaration

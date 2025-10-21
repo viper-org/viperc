@@ -1,6 +1,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecursiveDo #-}
+{-# LANGUAGE FlexibleContexts #-}
 
 module Codegen where
 
@@ -10,7 +11,7 @@ import Control.Applicative
 import Control.Monad.State
 import Data.Function
 import Data.List
-import qualified Data.Map as Map
+import Data.Map as Map
 import Data.Monoid ((<>))
 import Data.String
 import Data.String.Conversions (cs)
@@ -31,7 +32,8 @@ import LLVM.IRBuilder.Instruction as L;
 import LLVM.IRBuilder.Monad as L;
 import LLVM.IRBuilder.Constant as L;
 
-data Scope = Scope {}
+-- todo: proper scope-level local variables
+data Scope = Scope { locals :: Map String AST.Operand }
 
 type LLVM = L.ModuleBuilderT (State Scope)
 
@@ -39,9 +41,19 @@ type Builder = L.IRBuilderT LLVM
 
 data CodegenOperand = None | Some (AST.Operand)
 
+addLocal :: MonadState Scope m => String -> AST.Operand -> m ()
+addLocal name value = modify $ \env -> env { locals = Map.insert name value (locals env) }
+
+getLocal :: String -> Builder AST.Operand
+getLocal s = do
+    vars <- gets locals
+    case Map.lookup s vars of
+        Just var -> pure var
+        Nothing -> error ("unknown variable " ++ s) -- todo: proper error
+
 codegenFile :: [FunctionDef] -> AST.Module
 codegenFile decls =
-    flip evalState (Scope{}) $
+    flip evalState (Scope{locals = Map.empty}) $
         L.buildModuleT "hello.c" $ do
             mapM_ codegenFuncDef decls
 
@@ -70,6 +82,7 @@ codegenNode (ASTReturnStatement value) = case value of
 
 codegenNode (ASTVariableDeclaration name initVal) = do
     alloca <- L.alloca AST.i32 Nothing 0
+    addLocal name alloca
     case initVal of
         ASTNothing -> pure(None)
         val -> do
@@ -80,3 +93,8 @@ codegenNode (ASTVariableDeclaration name initVal) = do
             pure (None)
 
 codegenNode (ASTIntegerLiteral value) = pure (Some(L.int32 (fromIntegral value)))
+
+codegenNode (ASTVariableExpression name) = do
+    var <- getLocal name
+    l <- L.load var 0
+    pure(Some(l))
