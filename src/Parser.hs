@@ -95,6 +95,7 @@ parseFunction = do
                     pure (curr : rest)
 
 getBinaryOperatorPrecedence :: Token -> Parser Int
+getBinaryOperatorPrecedence TokenLeftParen = pure(90)
 getBinaryOperatorPrecedence TokenStar = pure(75)
 getBinaryOperatorPrecedence TokenSlash = pure(75)
 getBinaryOperatorPrecedence TokenPlus = pure(70)
@@ -122,9 +123,13 @@ parseExpr prec = do
                     if newPrec < prec then pure(l)
                     else do
                         _ <- consumeTok
-                        operator <- getBinaryOperator op
-                        right <- parseExpr newPrec
-                        parseMore (ASTBinaryExpression l operator right)
+                        if op == TokenLeftParen then do
+                            _ <- expectToken TokenRightParen
+                            parseMore (ASTCallExpression l)
+                        else do
+                            operator <- getBinaryOperator op
+                            right <- parseExpr newPrec
+                            parseMore (ASTBinaryExpression l operator right)
 
 parsePrimary :: Parser ASTNode
 parsePrimary = do

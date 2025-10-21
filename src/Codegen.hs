@@ -60,6 +60,7 @@ codegenFile decls =
 
 codegenFuncDef :: FunctionDef -> LLVM ()
 codegenFuncDef (FunctionDef returnType name body) = mdo
+    addLocal name funct
     scope <- get
     funct <- do
         L.function (AST.mkName $ cs name) [] (typeToLLVM returnType) emitBody
@@ -124,3 +125,11 @@ codegenNode (ASTBinaryExpression l op r) = do
                             BinaryDiv -> do
                                 op' <- L.sdiv left' right'
                                 pure(Some(op'))
+
+codegenNode (ASTCallExpression c) = do
+    case c of
+        (ASTVariableExpression ident) -> do
+            callee <- getLocal ident
+            call' <- L.call callee []
+            pure(Some(call'))
+        _ -> error "unimplemented call expression"
