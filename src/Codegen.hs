@@ -49,7 +49,7 @@ getLocal s = do
     vars <- gets locals
     case Map.lookup s vars of
         Just var -> pure var
-        Nothing -> error ("unknown variable " ++ s) -- todo: proper error
+        Nothing -> error ("'" ++ s ++ "' does not exist in this scope") -- todo: proper error
 
 codegenFile :: [FunctionDef] -> AST.Module
 codegenFile decls =
@@ -59,8 +59,10 @@ codegenFile decls =
 
 codegenFuncDef :: FunctionDef -> LLVM ()
 codegenFuncDef (FunctionDef name body) = mdo
+    scope <- get
     funct <- do
         L.function (AST.mkName $ cs name) [] AST.i32 emitBody
+    put scope
     pure()
 
     where
