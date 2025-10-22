@@ -36,13 +36,24 @@ import LLVM.IRBuilder.Monad as L;
 import LLVM.IRBuilder.Constant as L;
 
 -- todo: proper scope-level local variables
-data Scope = Scope { locals :: Map String AST.Operand }
+data Scope = Scope { locals :: Map String AST.Operand, uniqueID :: Int }
 
 type LLVM = L.ModuleBuilderT (State Scope)
 
 type Builder = L.IRBuilderT LLVM
 
 data CodegenOperand = None | Some (AST.Operand)
+
+nextID :: MonadState Scope m => m (Int)
+nextID = do
+    id <- gets uniqueID
+    modify $ \env -> env { uniqueID = id + 1 }
+    pure (id)
+
+getUniqName :: Builder SBS.ShortByteString
+getUniqName = do
+    id <- nextID
+    pure (SBS.toShort (BS.pack $ show id))
 
 addLocal :: MonadState Scope m => String -> AST.Operand -> m ()
 addLocal name value = modify $ \env -> env { locals = Map.insert name value (locals env) }
@@ -59,19 +70,19 @@ mTypeToLLVM ty = pure $ typeToLLVM ty
 
 codegenFile :: [FunctionDef] -> AST.Module
 codegenFile decls =
-    flip evalState (Scope{locals = Map.empty}) $
+    flip evalState (Scope{locals = Map.empty, uniqueID = 0}) $
         L.buildModuleT "hello.c" $ do
             mapM_ codegenFuncDef decls
 
 codegenFuncDef :: FunctionDef -> LLVM ()
 codegenFuncDef (FunctionDef returnType name args body isProto) = mdo
     addLocal name funct
-    scope <- get
+    scope <- gets locals
     let parms = [generateParm type' name' | (type', name') <- args]
     funct <- case isProto of
         True -> L.function (AST.mkName $ cs name) parms (typeToLLVM returnType) emitProto
         False -> L.function (AST.mkName $ cs name) parms (typeToLLVM returnType) emitBody
-    put scope
+    modify $ \env -> env { locals = scope }
     pure()
 
     where
@@ -121,6 +132,15 @@ codegenNode (ASTVariableDeclaration type' name initVal) = do
             pure (None)
 
 codegenNode (ASTIntegerLiteral value) = pure (Some(L.int32 (fromIntegral value)))
+
+codegenNode (ASTStringLiteral value) = do
+    let value' = value ++ "\0"
+    name1 <- getUniqName
+    name2 <- getUniqName
+    s <- L.globalStringPtr value' (Name name1)
+    glob <- L.global (Name name2) (AST.ptr AST.i8) s
+    load' <- L.load glob 0
+    pure (Some(load'))
 
 codegenNode (ASTVariableExpression name) = do
     var <- getLocal name

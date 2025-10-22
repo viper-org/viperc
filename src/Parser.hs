@@ -216,6 +216,10 @@ parsePrimary = do
             _ <- consumeTok
             pure (ASTVariableExpression s)
 
+        Just (TokenStringLiteral s) -> do
+            _ <- consumeTok
+            pure (ASTStringLiteral s)
+
         Just TokenReturnKeyword -> parseReturnStatement
         Just (TokenTypeKeyword _) -> parseVariableDeclaration
         _ -> Parser $ \s -> Left $ "Expected primary expression"

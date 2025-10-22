@@ -12,6 +12,7 @@ data Token = None
     | TokenRightBrace
     | TokenReturnKeyword
     | TokenIntegerLiteral String
+    | TokenStringLiteral String
     | TokenSemicolon
     | TokenComma
     | TokenEqual
@@ -58,4 +59,7 @@ tokenize ('&':rest) = TokenAmpersand : tokenize rest
 tokenize (c:rest) | isAlpha c = TokenIdentifier(c:takeWhile isAlphaNum rest) : tokenize (dropWhile isAlphaNum rest)
                   | isDigit c = TokenIntegerLiteral(c:takeWhile isDigit rest) : tokenize (dropWhile isDigit rest)
                   | isSpace c = tokenize (dropWhile isSpace rest)
+tokenize('"':rest) = do
+    let val = takeWhile (/='"') rest
+    TokenStringLiteral val : tokenize (drop 1 (dropWhile (/='"') rest))
 tokenize s = [TokenError(head s)]

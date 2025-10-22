@@ -21,6 +21,7 @@ data ASTNode = ASTNothing
              | ASTReturnStatement ReturnValue
              | ASTVariableDeclaration Type Name InitialValue
              | ASTIntegerLiteral Int
+             | ASTStringLiteral String
              | ASTVariableExpression Name
              | ASTBinaryExpression Left BinaryOperator Right
              | ASTUnaryExpression UnaryOperator ASTNode

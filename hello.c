@@ -1,7 +1,7 @@
-int main() {
-    int x = 41;
-    int* z = &x;
-    int** p = &z;
-    *z = 67;
-    return **p;
+void puts(char* str);
+
+int main(int argc, char** argv)
+{
+    puts("Hello, world!");
+    return 0;
 }
