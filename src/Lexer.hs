@@ -21,6 +21,8 @@ data Token = None
     | TokenStar
     | TokenSlash
     | TokenAmpersand
+    | TokenDoubleEqual
+    | TokenBangEqual
     deriving(Eq, Show)
 
 isType :: Token -> Bool
@@ -38,11 +40,14 @@ assignKeywords ((TokenIdentifier "short"):xs)  = TokenTypeKeyword ("short") : as
 assignKeywords ((TokenIdentifier "int"):xs)    = TokenTypeKeyword ("int")   : assignKeywords xs
 assignKeywords ((TokenIdentifier "long"):xs)   = TokenTypeKeyword ("long")  : assignKeywords xs
 assignKeywords ((TokenIdentifier "void"):xs)   = TokenTypeKeyword ("void")  : assignKeywords xs
+assignKeywords ((TokenIdentifier "bool"):xs)   = TokenTypeKeyword ("bool")  : assignKeywords xs
 assignKeywords ((TokenIdentifier "return"):xs) = TokenReturnKeyword : assignKeywords xs
 assignKeywords (x:xs) = x : assignKeywords xs
 
 tokenize :: String -> [Token]
 tokenize [] = []
+tokenize('=':'=':rest) = TokenDoubleEqual : tokenize rest
+tokenize('!':'=':rest) = TokenBangEqual : tokenize rest
 tokenize ('(':rest) = TokenLeftParen : tokenize rest
 tokenize (')':rest) = TokenRightParen : tokenize rest
 tokenize ('{':rest) = TokenLeftBrace : tokenize rest

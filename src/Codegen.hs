@@ -28,6 +28,7 @@ import qualified LLVM.AST.Constant as C
 import qualified LLVM.AST.FloatingPointPredicate as FP
 import LLVM.AST.Global
 import qualified LLVM.AST.Linkage as L
+import qualified LLVM.AST.IntegerPredicate as L
 import qualified LLVM.AST.Type as AST
 import LLVM.AST.Typed (typeOf)
 import LLVM.IRBuilder.Module as L;
@@ -180,6 +181,13 @@ codegenNode (ASTBinaryExpression l op r) = do
                                 pure(Some(op'))
                             BinaryDiv -> do
                                 op' <- L.sdiv left' right'
+                                pure(Some(op'))
+
+                            BinaryEqual -> do
+                                op' <- L.icmp L.EQ left' right'
+                                pure(Some(op'))
+                            BinaryNotEqual -> do
+                                op' <- L.icmp L.NE left' right'
                                 pure(Some(op'))
 
 codegenNode (ASTCallExpression c params) = do
