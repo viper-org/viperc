@@ -288,7 +288,11 @@ parsePrimary = do
         Just (TokenTypeKeyword _) -> parseVariableDeclaration
         Just TokenIfKeyword -> parseIfStatement
         Just TokenWhileKeyword -> parseWhileStatement
+        Just TokenForKeyword -> parseForStatement
         Just TokenLeftBrace -> parseCompoundStatement
+
+        Just TokenSemicolon -> pure $ ASTNode ASTNothing VoidType
+
         _ -> Parser $ \s -> Left $ "Expected primary expression"
 
 parseCallExpression :: Callee -> Parser ASTNode
@@ -364,6 +368,31 @@ parseWhileStatement = do
     body <- parseExpr defaultPrecedence
 
     pure $ ASTNode (ASTWhileStatement cond body) VoidType
+
+parseForStatement :: Parser ASTNode
+parseForStatement = do
+    _ <- consumeTok -- for
+    _ <- expectToken TokenLeftParen
+    init <- parseExpr defaultPrecedence
+    _ <- expectToken TokenSemicolon
+
+    cond <- parseExpr defaultPrecedence
+    _ <- expectToken TokenSemicolon
+
+    tok <- currentTok
+    iter <- case tok of
+        Just TokenRightParen -> pure $ ASTNode ASTNothing VoidType
+        _ -> parseExpr defaultPrecedence
+
+    _ <- expectToken TokenRightParen
+
+    body <- parseExpr defaultPrecedence
+
+    pure $ ASTNode (ASTForStatement init cond iter body) VoidType
+
+    where
+        isNothing (ASTNode ASTNothing _) = True
+        isNothing _ = False
 
 parseCompoundStatement :: Parser ASTNode
 parseCompoundStatement = do

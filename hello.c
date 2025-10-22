@@ -2,10 +2,7 @@ void puts(char* s);
 
 int main(int argc, char** argv)
 {
-    int i = 0;
-    while (i != argc) {
+    for (int i = 0; i != argc; i += 1)
         puts(*(argv + i));
-        i += 1;
-    }
     return 0;
 }

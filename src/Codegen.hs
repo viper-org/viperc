@@ -176,6 +176,30 @@ codegenNode (ASTNode (ASTWhileStatement cond body) _) = mdo
             L.br startBB
             endBB <- L.named L.block "end"
             pure(None)
+
+codegenNode (ASTNode (ASTForStatement init cond iter body) _) = mdo
+    _ <- codegenNode init
+    L.br condBB
+    condBB <- L.named L.block "cond"
+    cond' <- codegenNode cond
+    case cond' of
+        None -> mdo
+            L.br loopBB
+            loopBB <- L.named L.block "loop"
+            _ <- codegenNode body
+            _ <- codegenNode iter
+            L.br loopBB
+            endBB <- L.named L.block "end"
+            pure(None)
+            -- todo: add 
+        Some c -> mdo
+            L.condBr c loopBB endBB
+            loopBB <- L.named L.block "loop"
+            _ <- codegenNode body
+            _ <- codegenNode iter
+            L.br condBB
+            endBB <- L.named L.block "end"
+            pure (None)
      
 codegenNode (ASTNode (ASTCompoundStatement body) _) = do
     oldScope <- gets locals
@@ -281,3 +305,5 @@ codegenNode (ASTNode (ASTUnaryExpression operator operand) ty') = do
                     load' <- L.load lval' 0
                     pure (Some(load'))
         _ -> error $ "unimplemented unary operator " ++ show operator
+
+codegenNode (ASTNode (ASTNothing) _) = pure(None)

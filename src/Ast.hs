@@ -8,6 +8,8 @@ type InitialValue = ASTNode
 type Condition = ASTNode
 type Body = ASTNode
 type ElseBody = ASTNode
+type Init = ASTNode
+type Iter = ASTNode
 type Left = ASTNode
 type Right = ASTNode
 type Callee = ASTNode
@@ -27,6 +29,7 @@ data ASTNodeClass = ASTNothing
              | ASTVariableDeclaration Type Name InitialValue
              | ASTIfStatement Condition Body ElseBody
              | ASTWhileStatement Condition Body
+             | ASTForStatement Init Condition Iter Body
              | ASTCompoundStatement [ASTNode]
              | ASTIntegerLiteral Int
              | ASTStringLiteral String

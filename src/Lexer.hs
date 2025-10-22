@@ -14,6 +14,7 @@ data Token = None
     | TokenIfKeyword
     | TokenElseKeyword
     | TokenWhileKeyword
+    | TokenForKeyword
     | TokenIntegerLiteral String
     | TokenStringLiteral String
     | TokenSemicolon
@@ -50,6 +51,7 @@ assignKeywords ((TokenIdentifier "return"):xs) = TokenReturnKeyword         : as
 assignKeywords ((TokenIdentifier "if"):xs)     = TokenIfKeyword             : assignKeywords xs
 assignKeywords ((TokenIdentifier "else"):xs)   = TokenElseKeyword           : assignKeywords xs
 assignKeywords ((TokenIdentifier "while"):xs)  = TokenWhileKeyword          : assignKeywords xs
+assignKeywords ((TokenIdentifier "for"):xs)    = TokenForKeyword            : assignKeywords xs
 assignKeywords (x:xs) = x : assignKeywords xs
 
 tokenize :: String -> [Token]
