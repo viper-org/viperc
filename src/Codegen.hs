@@ -159,6 +159,20 @@ codegenNode (ASTNode (ASTIfStatement cond body elseBody) _) = mdo
             L.br mergeBB
             mergeBB <- L.named L.block "merge"
             pure(None)
+
+codegenNode (ASTNode (ASTWhileStatement cond body) _) = mdo
+    L.br startBB
+    startBB <- L.named L.block "start"
+    cond' <- codegenNode cond
+    case cond' of
+        None -> error $ "!"
+        Some c -> mdo
+            L.condBr c loopBB endBB
+            loopBB <- L.named L.block "loop"
+            codegenNode body
+            L.br startBB
+            endBB <- L.named L.block "end"
+            pure(None)
      
 codegenNode (ASTNode (ASTCompoundStatement body) _) = do
     oldScope <- gets locals

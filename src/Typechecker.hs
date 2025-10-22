@@ -37,6 +37,14 @@ typecheckNode (ASTNode (ASTIfStatement cond body elseBody) t) = do
         BoolType -> (ASTNode (ASTIfStatement cond' body' elseBody') t)
         x -> error $ "if-statement has non-boolean condition type '" ++ prettyPrint x ++ "'"
 
+typecheckNode (ASTNode (ASTWhileStatement cond body) t) = do
+    let cond' = typecheckNode cond
+    let body' = typecheckNode body
+
+    case (ty cond') of
+        BoolType -> (ASTNode (ASTWhileStatement cond' body') t)
+        x -> error $ "while-statement has non-boolean condition type '" ++ prettyPrint x ++ "'"
+
 typecheckNode (ASTNode (ASTCompoundStatement body) t) = do
     let body' = map typecheckNode body
     (ASTNode (ASTCompoundStatement body') t)

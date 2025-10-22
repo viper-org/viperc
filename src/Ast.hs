@@ -25,6 +25,7 @@ data ASTNodeClass = ASTNothing
              | ASTReturnStatement ReturnValue
              | ASTVariableDeclaration Type Name InitialValue
              | ASTIfStatement Condition Body ElseBody
+             | ASTWhileStatement Condition Body
              | ASTCompoundStatement [ASTNode]
              | ASTIntegerLiteral Int
              | ASTStringLiteral String

@@ -13,6 +13,7 @@ data Token = None
     | TokenReturnKeyword
     | TokenIfKeyword
     | TokenElseKeyword
+    | TokenWhileKeyword
     | TokenIntegerLiteral String
     | TokenStringLiteral String
     | TokenSemicolon
@@ -46,6 +47,7 @@ assignKeywords ((TokenIdentifier "bool"):xs)   = TokenTypeKeyword ("bool")  : as
 assignKeywords ((TokenIdentifier "return"):xs) = TokenReturnKeyword         : assignKeywords xs
 assignKeywords ((TokenIdentifier "if"):xs)     = TokenIfKeyword             : assignKeywords xs
 assignKeywords ((TokenIdentifier "else"):xs)   = TokenElseKeyword           : assignKeywords xs
+assignKeywords ((TokenIdentifier "while"):xs)  = TokenWhileKeyword          : assignKeywords xs
 assignKeywords (x:xs) = x : assignKeywords xs
 
 tokenize :: String -> [Token]

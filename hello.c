@@ -2,14 +2,11 @@ void puts(char* s);
 
 int main(int argc, char** argv)
 {
-    if (argc == 1) {
-        puts("argc: 1");
-    }
-    else {
-        if (argc == 2)
-            puts("argc: 2");
-        else
-            puts("argc > 2");
+    int i = 0;
+    while (i != argc) {
+        char** p = argv + i;
+        puts(*p);
+        i = i + 1;
     }
     return 0;
 }

@@ -277,6 +277,7 @@ parsePrimary = do
         Just TokenReturnKeyword -> parseReturnStatement
         Just (TokenTypeKeyword _) -> parseVariableDeclaration
         Just TokenIfKeyword -> parseIfStatement
+        Just TokenWhileKeyword -> parseWhileStatement
         Just TokenLeftBrace -> parseCompoundStatement
         _ -> Parser $ \s -> Left $ "Expected primary expression"
 
@@ -343,6 +344,16 @@ parseIfStatement = do
             elseBody <- parseExpr defaultPrecedence
             pure $ ASTNode (ASTIfStatement cond body elseBody) VoidType
         _ -> pure $ ASTNode (ASTIfStatement cond body (ASTNode ASTNothing VoidType)) VoidType
+
+parseWhileStatement :: Parser ASTNode
+parseWhileStatement = do
+    _ <- consumeTok
+    _ <- expectToken TokenLeftParen
+    cond <- parseExpr defaultPrecedence
+    _ <- expectToken TokenRightParen
+    body <- parseExpr defaultPrecedence
+
+    pure $ ASTNode (ASTWhileStatement cond body) VoidType
 
 parseCompoundStatement :: Parser ASTNode
 parseCompoundStatement = do
