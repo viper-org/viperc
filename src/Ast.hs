@@ -2,7 +2,6 @@ module AST where
 
 import Types
 
-type Name = String
 type ReturnValue = ASTNode
 type InitialValue = ASTNode
 type Condition = ASTNode
@@ -26,14 +25,16 @@ data UnaryOperator = UnaryRef | UnaryIndirect
 
 data ASTNodeClass = ASTNothing
              | ASTReturnStatement ReturnValue
-             | ASTVariableDeclaration Type Name InitialValue
+             | ASTVariableDeclaration Type String InitialValue
              | ASTIfStatement Condition Body ElseBody
              | ASTWhileStatement Condition Body
              | ASTForStatement Init Condition Iter Body
+             | ASTBreakStatement
+             | ASTContinueStatement
              | ASTCompoundStatement [ASTNode]
              | ASTIntegerLiteral Int
              | ASTStringLiteral String
-             | ASTVariableExpression Name
+             | ASTVariableExpression String
              | ASTBinaryExpression Left BinaryOperator Right
              | ASTUnaryExpression UnaryOperator ASTNode
              | ASTCallExpression Callee [Param]

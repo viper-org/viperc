@@ -15,6 +15,8 @@ data Token = None
     | TokenElseKeyword
     | TokenWhileKeyword
     | TokenForKeyword
+    | TokenBreakKeyword
+    | TokenContinueKeyword
     | TokenIntegerLiteral String
     | TokenStringLiteral String
     | TokenSemicolon
@@ -41,17 +43,19 @@ isIdentifier _ = False;
 
 assignKeywords :: [Token] -> [Token]
 assignKeywords [] = []
-assignKeywords ((TokenIdentifier "char"):xs)   = TokenTypeKeyword ("char")  : assignKeywords xs
-assignKeywords ((TokenIdentifier "short"):xs)  = TokenTypeKeyword ("short") : assignKeywords xs
-assignKeywords ((TokenIdentifier "int"):xs)    = TokenTypeKeyword ("int")   : assignKeywords xs
-assignKeywords ((TokenIdentifier "long"):xs)   = TokenTypeKeyword ("long")  : assignKeywords xs
-assignKeywords ((TokenIdentifier "void"):xs)   = TokenTypeKeyword ("void")  : assignKeywords xs
-assignKeywords ((TokenIdentifier "bool"):xs)   = TokenTypeKeyword ("bool")  : assignKeywords xs
-assignKeywords ((TokenIdentifier "return"):xs) = TokenReturnKeyword         : assignKeywords xs
-assignKeywords ((TokenIdentifier "if"):xs)     = TokenIfKeyword             : assignKeywords xs
-assignKeywords ((TokenIdentifier "else"):xs)   = TokenElseKeyword           : assignKeywords xs
-assignKeywords ((TokenIdentifier "while"):xs)  = TokenWhileKeyword          : assignKeywords xs
-assignKeywords ((TokenIdentifier "for"):xs)    = TokenForKeyword            : assignKeywords xs
+assignKeywords ((TokenIdentifier "char"):xs)     = TokenTypeKeyword ("char")  : assignKeywords xs
+assignKeywords ((TokenIdentifier "short"):xs)    = TokenTypeKeyword ("short") : assignKeywords xs
+assignKeywords ((TokenIdentifier "int"):xs)      = TokenTypeKeyword ("int")   : assignKeywords xs
+assignKeywords ((TokenIdentifier "long"):xs)     = TokenTypeKeyword ("long")  : assignKeywords xs
+assignKeywords ((TokenIdentifier "void"):xs)     = TokenTypeKeyword ("void")  : assignKeywords xs
+assignKeywords ((TokenIdentifier "bool"):xs)     = TokenTypeKeyword ("bool")  : assignKeywords xs
+assignKeywords ((TokenIdentifier "return"):xs)   = TokenReturnKeyword         : assignKeywords xs
+assignKeywords ((TokenIdentifier "if"):xs)       = TokenIfKeyword             : assignKeywords xs
+assignKeywords ((TokenIdentifier "else"):xs)     = TokenElseKeyword           : assignKeywords xs
+assignKeywords ((TokenIdentifier "while"):xs)    = TokenWhileKeyword          : assignKeywords xs
+assignKeywords ((TokenIdentifier "for"):xs)      = TokenForKeyword            : assignKeywords xs
+assignKeywords ((TokenIdentifier "break"):xs)    = TokenBreakKeyword          : assignKeywords xs
+assignKeywords ((TokenIdentifier "continue"):xs) = TokenContinueKeyword       : assignKeywords xs
 assignKeywords (x:xs) = x : assignKeywords xs
 
 tokenize :: String -> [Token]

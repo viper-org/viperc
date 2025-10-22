@@ -37,13 +37,23 @@ import LLVM.IRBuilder.Monad as L;
 import LLVM.IRBuilder.Constant as L;
 
 -- todo: proper scope-level local variables
-data Scope = Scope { locals :: Map String AST.Operand, uniqueID :: Int }
+data Scope = Scope {
+    locals :: Map String AST.Operand,
+    uniqueID :: Int,
+    breakTo :: AST.Name,
+    continueTo :: AST.Name
+}
 
 type LLVM = L.ModuleBuilderT (State Scope)
 
 type Builder = L.IRBuilderT LLVM
 
 data CodegenOperand = None | Some (AST.Operand)
+
+codegenTerm :: Builder() -> Builder()
+codegenTerm op = do
+    hasTerm <- L.hasTerminator
+    unless hasTerm op
 
 nextID :: MonadState Scope m => m (Int)
 nextID = do
@@ -71,7 +81,7 @@ mTypeToLLVM ty = pure $ typeToLLVM ty
 
 codegenFile :: [FunctionDef] -> AST.Module
 codegenFile decls =
-    flip evalState (Scope{locals = Map.empty, uniqueID = 0}) $
+    flip evalState (Scope{locals = Map.empty, uniqueID = 0, breakTo = "", continueTo = ""}) $
         L.buildModuleT "hello.c" $ do
             mapM_ codegenFuncDef decls
 
@@ -144,7 +154,7 @@ codegenNode (ASTNode (ASTIfStatement cond body (ASTNode ASTNothing _)) _) = mdo
             L.condBr c trueBB mergeBB
             trueBB <- L.named L.block "true"
             codegenNode body
-            L.br mergeBB
+            codegenTerm $ L.br mergeBB
             mergeBB <- L.named L.block "merge"
             pure(None)
 
@@ -156,14 +166,18 @@ codegenNode (ASTNode (ASTIfStatement cond body elseBody) _) = mdo
             L.condBr c trueBB falseBB
             trueBB <- L.named L.block "true"
             codegenNode body
-            L.br mergeBB
+            codegenTerm $ L.br mergeBB
             falseBB <- L.named L.block "false"
             codegenNode elseBody
-            L.br mergeBB
+            codegenTerm $ L.br mergeBB
             mergeBB <- L.named L.block "merge"
             pure(None)
 
 codegenNode (ASTNode (ASTWhileStatement cond body) _) = mdo
+    scope <- gets locals
+    bTo <- gets breakTo
+    cTo <- gets continueTo
+
     L.br startBB
     startBB <- L.named L.block "start"
     cond' <- codegenNode cond
@@ -172,12 +186,18 @@ codegenNode (ASTNode (ASTWhileStatement cond body) _) = mdo
         Some c -> mdo
             L.condBr c loopBB endBB
             loopBB <- L.named L.block "loop"
+            modify $ \env -> env { breakTo = endBB, continueTo = startBB }
             codegenNode body
-            L.br startBB
+            codegenTerm $ L.br startBB
             endBB <- L.named L.block "end"
+            modify $ \env -> env { locals = scope, breakTo = bTo, continueTo = cTo }
             pure(None)
 
 codegenNode (ASTNode (ASTForStatement init cond iter body) _) = mdo
+    scope <- gets locals
+    bTo <- gets breakTo
+    cTo <- gets continueTo
+
     _ <- codegenNode init
     L.br condBB
     condBB <- L.named L.block "cond"
@@ -186,20 +206,38 @@ codegenNode (ASTNode (ASTForStatement init cond iter body) _) = mdo
         None -> mdo
             L.br loopBB
             loopBB <- L.named L.block "loop"
+            modify $ \env -> env { breakTo = endBB, continueTo = iterBB }
             _ <- codegenNode body
+            codegenTerm $ L.br iterBB
+            iterBB <- L.named L.block "iter"
             _ <- codegenNode iter
-            L.br loopBB
+            codegenTerm $ L.br loopBB
             endBB <- L.named L.block "end"
+            modify $ \env -> env { locals = scope, breakTo = bTo, continueTo = cTo }
             pure(None)
-            -- todo: add 
+
         Some c -> mdo
             L.condBr c loopBB endBB
             loopBB <- L.named L.block "loop"
+            modify $ \env -> env { breakTo = endBB, continueTo = iterBB }
             _ <- codegenNode body
+            codegenTerm $ L.br iterBB
+            iterBB <- L.named L.block "iter"
             _ <- codegenNode iter
-            L.br condBB
+            codegenTerm $ L.br condBB
             endBB <- L.named L.block "end"
+            modify $ \env -> env { locals = scope, breakTo = bTo, continueTo = cTo }
             pure (None)
+
+codegenNode (ASTNode ASTBreakStatement _) = do
+    bTo <- gets breakTo
+    codegenTerm $ L.br bTo
+    pure (None)
+
+codegenNode (ASTNode ASTContinueStatement _) = do
+    cTo <- gets continueTo
+    codegenTerm $ L.br cTo
+    pure (None)
      
 codegenNode (ASTNode (ASTCompoundStatement body) _) = do
     oldScope <- gets locals

@@ -291,6 +291,14 @@ parsePrimary = do
         Just TokenForKeyword -> parseForStatement
         Just TokenLeftBrace -> parseCompoundStatement
 
+        Just TokenBreakKeyword -> do
+            _ <- consumeTok
+            pure $ ASTNode ASTBreakStatement VoidType
+
+        Just TokenContinueKeyword -> do
+            _ <- consumeTok
+            pure $ ASTNode ASTContinueStatement VoidType
+
         Just TokenSemicolon -> pure $ ASTNode ASTNothing VoidType
 
         _ -> Parser $ \s -> Left $ "Expected primary expression"
