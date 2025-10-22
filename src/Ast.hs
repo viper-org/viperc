@@ -15,7 +15,7 @@ type Callee = ASTNode
 type Param = ASTNode
 
 data BinaryOperator = BinaryAdd | BinarySub | BinaryMul | BinaryDiv
-                    | BinaryEqual | BinaryNotEqual
+                    | BinaryEqual | BinaryNotEqual | BinaryLessThan | BinaryGreaterThan | BinaryLessEqual | BinaryGreaterEqual
                     | BinaryAssign
                     | BinaryAddAssign | BinarySubAssign
     deriving (Eq, Show)

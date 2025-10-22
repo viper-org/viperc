@@ -334,6 +334,18 @@ codegenNode (ASTNode (ASTBinaryExpression l op r) ty') = do
                             BinaryNotEqual -> do
                                 op' <- L.icmp L.NE left' right'
                                 pure(Some(op'))
+                            BinaryLessThan -> do
+                                op' <- L.icmp L.SLT left' right'
+                                pure(Some(op'))
+                            BinaryGreaterThan -> do
+                                op' <- L.icmp L.SGT left' right'
+                                pure(Some(op'))
+                            BinaryLessEqual -> do
+                                op' <- L.icmp L.SLE left' right'
+                                pure(Some(op'))
+                            BinaryGreaterEqual -> do
+                                op' <- L.icmp L.SGE left' right'
+                                pure(Some(op'))
 
 codegenNode (ASTNode (ASTCallExpression c params) ty) = do
     case c of

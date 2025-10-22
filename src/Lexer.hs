@@ -32,6 +32,10 @@ data Token = None
     | TokenAmpersand
     | TokenDoubleEqual
     | TokenBangEqual
+    | TokenLessThan
+    | TokenGreaterThan
+    | TokenLessEqual
+    | TokenGreaterEqual
     | TokenPlusEqual
     | TokenMinusEqual
     deriving(Eq, Show)
@@ -69,6 +73,10 @@ tokenize('+':'=':rest) = TokenPlusEqual : tokenize rest
 tokenize('+':'+':rest) = TokenDoublePlus : tokenize rest
 tokenize('-':'-':rest) = TokenDoubleMinus : tokenize rest
 tokenize('-':'=':rest) = TokenMinusEqual : tokenize rest
+tokenize('<':'=':rest) = TokenLessEqual : tokenize rest
+tokenize('>':'=':rest) = TokenGreaterEqual : tokenize rest
+tokenize('<':rest) = TokenLessThan : tokenize rest
+tokenize('>':rest) = TokenGreaterThan : tokenize rest
 tokenize ('(':rest) = TokenLeftParen : tokenize rest
 tokenize (')':rest) = TokenRightParen : tokenize rest
 tokenize ('{':rest) = TokenLeftBrace : tokenize rest

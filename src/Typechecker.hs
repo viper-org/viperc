@@ -112,6 +112,10 @@ typecheckNode (ASTNode (ASTBinaryExpression l op r) ty') = do
     let destType = case op of
             BinaryEqual -> BoolType
             BinaryNotEqual -> BoolType
+            BinaryLessThan -> BoolType
+            BinaryGreaterThan -> BoolType
+            BinaryLessEqual -> BoolType
+            BinaryGreaterEqual -> BoolType
             _ -> lType
 
     case op of
@@ -135,7 +139,7 @@ typecheckNode (ASTNode (ASTUnaryExpression op val) ty') = do
     case op of
         UnaryRef -> ASTNode (ASTUnaryExpression op val') (PointerType $ ty val')
         UnaryIndirect -> ASTNode (ASTUnaryExpression op val') (getPointeeType $ ty val')
-        
+
         UnaryMinus  -> ASTNode (ASTUnaryExpression op val') (ty val')
         
         PrefixInc  -> ASTNode (ASTUnaryExpression op val') (ty val')
