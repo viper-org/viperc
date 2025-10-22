@@ -93,6 +93,9 @@ codegenNodeLVal (ASTVariableExpression ident) = do
     var <- getLocal ident
     pure(Some(var))
 
+codegenNodeLVal (ASTUnaryExpression UnaryIndirect op) = do
+    codegenNode op
+
 codegenNode :: ASTNode -> Builder CodegenOperand
 codegenNode (ASTReturnStatement value) = case value of
     ASTNothing -> do
@@ -174,3 +177,17 @@ codegenNode (ASTCallExpression c params) = do
                 case val of
                     None -> error "Error" -- todo: better error
                     Some x -> pure (x,[])
+
+codegenNode (ASTUnaryExpression operator operand) = do
+    case operator of
+        UnaryRef -> do
+            codegenNodeLVal operand
+
+        UnaryIndirect -> do
+            lval <- codegenNode operand
+            case lval of
+                None -> error "Error"
+                Some (lval') -> do
+                    load' <- L.load lval' 0
+                    pure (Some(load'))
+        _ -> error $ "unimplemented unary operator " ++ show operator

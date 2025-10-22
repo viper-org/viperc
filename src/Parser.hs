@@ -55,12 +55,28 @@ expectToken z = do
     if t == z then pure ()
     else Parser $ \s -> Left $ "expected " ++ show z ++ ", found " ++ show t -- Todo: better error
 
-parseType :: String -> Type
-parseType "char"  = CharType
-parseType "short" = ShortType
-parseType "int"   = IntType
-parseType "long"  = LongType
-parseType "void"  = VoidType
+parseType :: Parser (Type)
+parseType = do
+    tok <- currentTok
+    case tok of
+        Nothing -> Parser $ \s -> Left $ "expected a type"
+        Just (TokenTypeKeyword name) -> do
+            _ <- consumeTok
+            case name of
+                "char"  -> parseMore(CharType)
+                "short" -> parseMore(ShortType)
+                "int"   -> parseMore(IntType)
+                "long"  -> parseMore(LongType)
+                "void"  -> parseMore(VoidType)
+            
+            where
+                parseMore type' = do
+                    tok <- currentTok
+                    case tok of
+                        Just TokenStar -> do
+                            _ <- consumeTok
+                            parseMore $ PointerType type'
+                        _ -> pure (type')
 
 parseFile :: Parser [FunctionDef]
 parseFile = do
@@ -95,13 +111,13 @@ parseParams = do
 
 parseParam :: Parser (Type, String)
 parseParam = do
-    (TokenTypeKeyword typeName) <- satisfyToken isType
+    type' <- parseType
     (TokenIdentifier  parmName) <- satisfyToken isIdentifier
-    pure ((parseType typeName), parmName)
+    pure (type', parmName)
 
 parseFunction :: Parser FunctionDef
 parseFunction = do
-    (TokenTypeKeyword typeName) <- satisfyToken isType
+    type' <- parseType
     TokenIdentifier name <- satisfyToken isIdentifier
     _ <- expectToken TokenLeftParen
     parms <- parseParams
@@ -110,12 +126,12 @@ parseFunction = do
     case tok of
         Just TokenSemicolon -> do
             _ <- consumeTok
-            pure (FunctionDef (parseType typeName) name parms [] True)
+            pure (FunctionDef type' name parms [] True)
         _ -> do
             _ <- expectToken TokenLeftBrace
             body <- parseBody
             _ <- expectToken TokenRightBrace
-            pure (FunctionDef (parseType typeName) name parms body False)
+            pure (FunctionDef type' name parms body False)
 
             where
                 parseBody = do
@@ -145,9 +161,29 @@ getBinaryOperator TokenMinus = pure(BinarySub)
 getBinaryOperator TokenEqual = pure(BinaryAssign)
 getBinaryOperator z = Parser $ \s -> Left $ "unexpected attempt to get binary operator " ++ show z
 
+getUnaryOperatorPrecedence :: Token -> Parser Int
+getUnaryOperatorPrecedence TokenAmpersand = pure(85)
+getUnaryOperatorPrecedence TokenStar = pure(85)
+getUnaryOperatorPrecedence _ = pure(0)
+
+getUnaryOperator :: Token -> Parser UnaryOperator
+getUnaryOperator TokenAmpersand = pure(UnaryRef)
+getUnaryOperator TokenStar = pure(UnaryIndirect)
+getUnaryOperator z = Parser $ \s -> Left $ "unexpected attempt to get unary operator " ++ show z
+
 parseExpr :: Int -> Parser ASTNode
 parseExpr prec = do
-    left <- parsePrimary
+    tok <- currentTok
+    left <- case tok of
+        Nothing -> error "!" -- todo: proper error
+        Just op -> do
+            unaryPrec <- getUnaryOperatorPrecedence op
+            if unaryPrec >= prec then do
+                _ <- consumeTok
+                operand <- parseExpr unaryPrec
+                operator <- getUnaryOperator op
+                pure (ASTUnaryExpression operator operand)
+            else parsePrimary
     parseMore left
     where
         parseMore l = do
@@ -219,8 +255,7 @@ parseReturnStatement = do
 
 parseVariableDeclaration :: Parser ASTNode
 parseVariableDeclaration = do
-    (TokenTypeKeyword typeName) <- satisfyToken isType
-    let type' = parseType typeName
+    type' <- parseType
     TokenIdentifier name <- satisfyToken isIdentifier
     tok <- currentTok
     case tok of

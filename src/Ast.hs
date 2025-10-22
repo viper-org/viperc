@@ -14,12 +14,16 @@ data BinaryOperator = BinaryAdd | BinarySub | BinaryMul | BinaryDiv
                     | BinaryAssign
     deriving (Eq, Show)
 
+data UnaryOperator = UnaryRef | UnaryIndirect
+    deriving (Eq, Show)
+
 data ASTNode = ASTNothing
              | ASTReturnStatement ReturnValue
              | ASTVariableDeclaration Type Name InitialValue
              | ASTIntegerLiteral Int
              | ASTVariableExpression Name
              | ASTBinaryExpression Left BinaryOperator Right
+             | ASTUnaryExpression UnaryOperator ASTNode
              | ASTCallExpression Callee [Param]
              deriving (Eq, Show)
 

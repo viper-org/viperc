@@ -1,8 +1,7 @@
-int ident(int x);
-
-int add(int a, int b) { return a + b; }
-
-int main(int argc) {
-    int ret = ident(add(argc, 1));
-    return ret;
+int main() {
+    int x = 41;
+    int* z = &x;
+    int** p = &z;
+    *z = 67;
+    return **p;
 }
