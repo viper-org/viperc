@@ -3,14 +3,30 @@ module Typechecker where
 import Types
 import AST
 
-typecheckFile :: [FunctionDef] -> [FunctionDef]
+typecheckFile :: [ASTGlobal] -> [ASTGlobal]
 typecheckFile decls = do
-    [typecheckFunc decl | decl <- decls]
+    [typecheckGlob decl | decl <- decls]
 
-typecheckFunc :: FunctionDef -> FunctionDef
+typecheckGlob :: ASTGlobal -> ASTGlobal
+typecheckGlob (ASTFunction (FunctionDef a b c d e)) = typecheckFunc (FunctionDef a b c d e)
+typecheckGlob (ASTGlobalVar type' name initVal) = typecheckGlobalVar (ASTGlobalVar type' name initVal)
+
+typecheckGlobalVar :: ASTGlobal -> ASTGlobal
+typecheckGlobalVar (ASTGlobalVar type' name (ASTNode ASTNothing _)) = case type' of
+    VoidType -> error $ "variable '" ++ name ++ "' has non-object type 'void'"
+    t -> ASTGlobalVar type' name (ASTNode ASTNothing VoidType)
+typecheckGlobalVar (ASTGlobalVar type' name init) = do
+    let init' = typecheckNode init
+    let initType = ty init'
+    case type' of
+        VoidType -> error $ "global variable '" ++ name ++ "' has non-object type 'void'"
+        x -> if x == initType then ASTGlobalVar type' name init'
+            else error $ "global variable '" ++ name ++ "' has initializer of type '" ++ prettyPrint initType ++ "'"
+
+typecheckFunc :: FunctionDef -> ASTGlobal
 typecheckFunc (FunctionDef a b c body d) = do
     let newBody = [typecheckNode x | x <- body]
-    FunctionDef a b c newBody d
+    ASTFunction $ FunctionDef a b c newBody d
 
 typecheckNode :: ASTNode -> ASTNode
 typecheckNode (ASTNode (ASTVariableDeclaration ty name (ASTNode ASTNothing _)) ty') = case ty of

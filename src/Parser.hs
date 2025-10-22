@@ -116,15 +116,29 @@ parseType = do
                             parseMore $ PointerType type'
                         _ -> pure (type')
 
-parseFile :: Parser [FunctionDef]
+parseFile :: Parser [ASTGlobal]
 parseFile = do
     tok <- currentTok
     case tok of
         Just (TokenTypeKeyword _) -> do
-            curr <- parseFunction
+            curr <- parseGlobal
             rest <- parseFile
             pure (curr : rest)
         _ -> pure []
+
+parseGlobal :: Parser ASTGlobal
+parseGlobal = do
+    tok <- currentTok
+    case tok of
+        Just (TokenTypeKeyword _) -> do
+            type' <- parseType
+            (TokenIdentifier name) <- satisfyToken isIdentifier
+            tok <- currentTok
+            case tok of
+                Just TokenLeftParen -> parseFunction type' name
+                Just TokenEqual -> parseGlobalVar type' name
+                z -> Parser $ \s -> Left $ "expected declaration. found " ++ show z
+        z -> Parser $ \s -> Left $ "expected declaration. found " ++ show z
 
 parseParams :: Parser [(Type, String)]
 parseParams = do
@@ -153,10 +167,8 @@ parseParam = do
     (TokenIdentifier  parmName) <- satisfyToken isIdentifier
     pure (type', parmName)
 
-parseFunction :: Parser FunctionDef
-parseFunction = do
-    type' <- parseType
-    TokenIdentifier name <- satisfyToken isIdentifier
+parseFunction :: Type -> String -> Parser ASTGlobal
+parseFunction type' name = do
     _ <- expectToken TokenLeftParen
     parms <- parseParams
     _ <- expectToken TokenRightParen
@@ -174,13 +186,13 @@ parseFunction = do
         Just TokenSemicolon -> do
             _ <- consumeTok
             setSymbols oldScope
-            pure (FunctionDef fnType name parms [] True)
+            pure $ ASTFunction (FunctionDef fnType name parms [] True)
         _ -> do
             _ <- expectToken TokenLeftBrace
             body <- parseBody
             _ <- expectToken TokenRightBrace
             setSymbols oldScope
-            pure (FunctionDef fnType name parms body False)
+            pure $ ASTFunction (FunctionDef fnType name parms body False)
 
             where
                 parseBody = do
@@ -192,6 +204,20 @@ parseFunction = do
                             _ <- expectToken TokenSemicolon
                             rest <- parseBody
                             pure (curr : rest)
+
+parseGlobalVar :: Type -> String -> Parser ASTGlobal
+parseGlobalVar type' name = do
+    addSymbol name type'
+    tok <- currentTok
+    case tok of
+        Just TokenEqual -> do
+            _ <- consumeTok
+            initVal <- parseExpr defaultPrecedence
+            _ <- expectToken TokenSemicolon
+            pure $ ASTGlobalVar type' name initVal
+        Just TokenSemicolon -> do
+            _ <- consumeTok
+            pure $ ASTGlobalVar type' name (ASTNode ASTNothing VoidType)
 
 getBinaryOperatorPrecedence :: Token -> Parser Int
 getBinaryOperatorPrecedence TokenLeftParen = pure(90)

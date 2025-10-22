@@ -45,6 +45,10 @@ data ASTNode = ASTNode {
     ty :: Type
 } deriving (Eq, Show)
 
+data ASTGlobal = ASTFunction FunctionDef
+               | ASTGlobalVar Type String InitialValue
+    deriving (Eq, Show)
+
 data FunctionDef = FunctionDef {
     fnType :: Type,
     name :: String,

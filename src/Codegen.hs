@@ -79,11 +79,22 @@ getLocal s = do
 mTypeToLLVM :: MonadState Scope m => Types.Type -> m AST.Type
 mTypeToLLVM ty = pure $ typeToLLVM ty
 
-codegenFile :: [FunctionDef] -> AST.Module
+codegenFile :: [ASTGlobal] -> AST.Module
 codegenFile decls =
     flip evalState (Scope{locals = Map.empty, uniqueID = 0, breakTo = "", continueTo = ""}) $
         L.buildModuleT "hello.c" $ do
-            mapM_ codegenFuncDef decls
+            mapM_ codegenDecl decls
+
+codegenDecl :: ASTGlobal -> LLVM()
+codegenDecl (ASTFunction (FunctionDef a b c d e)) = codegenFuncDef (FunctionDef a b c d e)
+codegenDecl (ASTGlobalVar a b c) = codegenGlobalVar (ASTGlobalVar a b c)
+
+codegenGlobalVar :: ASTGlobal -> LLVM ()
+codegenGlobalVar (ASTGlobalVar type' name init) = do
+    c <- codegenNodeConstant init
+    glob <- L.global (Name (SBS.toShort (BS.pack name))) (typeToLLVM type') c
+    addLocal name glob
+    pure ()
 
 codegenFuncDef :: FunctionDef -> LLVM ()
 codegenFuncDef (FunctionDef typ name args body isProto) = mdo
@@ -121,6 +132,9 @@ codegenNodeLVal (ASTNode (ASTUnaryExpression UnaryIndirect op) _) = do
     case z of
         None -> error "!"
         (Some x) -> pure x
+
+codegenNodeConstant :: ASTNode -> LLVM C.Constant
+codegenNodeConstant (ASTNode (ASTIntegerLiteral i) _) = pure $ C.Int (fromIntegral i) (fromIntegral i)
 
 codegenNode :: ASTNode -> Builder CodegenOperand
 codegenNode (ASTNode (ASTReturnStatement value) _) = case value of
