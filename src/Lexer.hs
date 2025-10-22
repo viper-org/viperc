@@ -29,7 +29,10 @@ data Token = None
     | TokenSlash
     | TokenDoublePlus
     | TokenDoubleMinus
+    | TokenBang
     | TokenAmpersand
+    | TokenDoubleAmpersand
+    | TokenDoublePipe
     | TokenDoubleEqual
     | TokenBangEqual
     | TokenLessThan
@@ -75,6 +78,8 @@ tokenize('-':'-':rest) = TokenDoubleMinus : tokenize rest
 tokenize('-':'=':rest) = TokenMinusEqual : tokenize rest
 tokenize('<':'=':rest) = TokenLessEqual : tokenize rest
 tokenize('>':'=':rest) = TokenGreaterEqual : tokenize rest
+tokenize('&':'&':rest) = TokenDoubleAmpersand : tokenize rest
+tokenize('|':'|':rest) = TokenDoublePipe : tokenize rest
 tokenize('<':rest) = TokenLessThan : tokenize rest
 tokenize('>':rest) = TokenGreaterThan : tokenize rest
 tokenize ('(':rest) = TokenLeftParen : tokenize rest
@@ -89,6 +94,7 @@ tokenize ('-':rest) = TokenMinus : tokenize rest
 tokenize ('*':rest) = TokenStar : tokenize rest
 tokenize ('/':rest) = TokenSlash : tokenize rest
 tokenize ('&':rest) = TokenAmpersand : tokenize rest
+tokenize ('!':rest) = TokenBang : tokenize rest
 -- Keywords will be transformed afterwards
 tokenize (c:rest) | isAlpha c = TokenIdentifier(c:takeWhile isAlphaNum rest) : tokenize (dropWhile isAlphaNum rest)
                   | isDigit c = TokenIntegerLiteral(c:takeWhile isDigit rest) : tokenize (dropWhile isDigit rest)

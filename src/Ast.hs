@@ -16,12 +16,13 @@ type Param = ASTNode
 
 data BinaryOperator = BinaryAdd | BinarySub | BinaryMul | BinaryDiv
                     | BinaryEqual | BinaryNotEqual | BinaryLessThan | BinaryGreaterThan | BinaryLessEqual | BinaryGreaterEqual
+                    | LogicalAnd | LogicalOr
                     | BinaryAssign
                     | BinaryAddAssign | BinarySubAssign
     deriving (Eq, Show)
 
 data UnaryOperator = UnaryRef | UnaryIndirect
-                   | UnaryMinus
+                   | UnaryMinus | LogicalNot
                    | PrefixInc | PrefixDec | PostfixInc | PostfixDec
     deriving (Eq, Show)
 

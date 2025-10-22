@@ -141,6 +141,28 @@ codegenNodeLVal (ASTNode (ASTUnaryExpression UnaryIndirect op) _) = do
 codegenNodeConstant :: ASTNode -> LLVM C.Constant
 codegenNodeConstant (ASTNode (ASTIntegerLiteral i) _) = pure $ C.Int (fromIntegral i) (fromIntegral i)
 
+codegenNodeConditional :: ASTNode -> AST.Name -> AST.Name -> Builder CodegenOperand
+codegenNodeConditional (ASTNode (ASTBinaryExpression l LogicalAnd r) _) trueBB falseBB = mdo
+    codegenNodeConditional l newBB falseBB
+    newBB <- L.named L.block "inter"
+    codegenNodeConditional r trueBB falseBB
+    pure(None)
+
+codegenNodeConditional (ASTNode (ASTBinaryExpression l LogicalOr r) _) trueBB falseBB = mdo
+    codegenNodeConditional l trueBB newBB
+    newBB <- L.named L.block "inter"
+    codegenNodeConditional r trueBB falseBB
+    pure(None)
+    
+codegenNodeConditional (ASTNode (ASTUnaryExpression LogicalNot x) _) trueBB falseBB = mdo
+    codegenNodeConditional x falseBB trueBB
+    pure(None)
+
+codegenNodeConditional cond trueBB falseBB = do
+    cond' <- codegenNode cond
+    L.condBr (force cond') trueBB falseBB
+    pure(None)
+
 codegenNode :: ASTNode -> Builder CodegenOperand
 codegenNode (ASTNode (ASTReturnStatement value) _) = case value of
     (ASTNode ASTNothing _) -> do
@@ -166,31 +188,23 @@ codegenNode (ASTNode (ASTVariableDeclaration type' name initVal) _) = do
             pure (None)
 
 codegenNode (ASTNode (ASTIfStatement cond body (ASTNode ASTNothing _)) _) = mdo
-    cond' <- codegenNode cond
-    case cond' of
-        None -> error $ "!"
-        Some c -> mdo
-            L.condBr c trueBB mergeBB
-            trueBB <- L.named L.block "true"
-            codegenNode body
-            codegenTerm $ L.br mergeBB
-            mergeBB <- L.named L.block "merge"
-            pure(None)
+    codegenNodeConditional cond trueBB mergeBB
+    trueBB <- L.named L.block "true"
+    codegenNode body
+    codegenTerm $ L.br mergeBB
+    mergeBB <- L.named L.block "merge"
+    pure(None)
 
 codegenNode (ASTNode (ASTIfStatement cond body elseBody) _) = mdo
-    cond' <- codegenNode cond
-    case cond' of
-        None -> error $ "!"
-        Some c -> mdo
-            L.condBr c trueBB falseBB
-            trueBB <- L.named L.block "true"
-            codegenNode body
-            codegenTerm $ L.br mergeBB
-            falseBB <- L.named L.block "false"
-            codegenNode elseBody
-            codegenTerm $ L.br mergeBB
-            mergeBB <- L.named L.block "merge"
-            pure(None)
+    codegenNodeConditional cond trueBB falseBB
+    trueBB <- L.named L.block "true"
+    codegenNode body
+    codegenTerm $ L.br mergeBB
+    falseBB <- L.named L.block "false"
+    codegenNode elseBody
+    codegenTerm $ L.br mergeBB
+    mergeBB <- L.named L.block "merge"
+    pure(None)
 
 codegenNode (ASTNode (ASTWhileStatement cond body) _) = mdo
     scope <- gets locals
@@ -199,18 +213,14 @@ codegenNode (ASTNode (ASTWhileStatement cond body) _) = mdo
 
     L.br startBB
     startBB <- L.named L.block "start"
-    cond' <- codegenNode cond
-    case cond' of
-        None -> error $ "!"
-        Some c -> mdo
-            L.condBr c loopBB endBB
-            loopBB <- L.named L.block "loop"
-            modify $ \env -> env { breakTo = endBB, continueTo = startBB }
-            codegenNode body
-            codegenTerm $ L.br startBB
-            endBB <- L.named L.block "end"
-            modify $ \env -> env { locals = scope, breakTo = bTo, continueTo = cTo }
-            pure(None)
+    codegenNodeConditional cond loopBB endBB
+    loopBB <- L.named L.block "loop"
+    modify $ \env -> env { breakTo = endBB, continueTo = startBB }
+    codegenNode body
+    codegenTerm $ L.br startBB
+    endBB <- L.named L.block "end"
+    modify $ \env -> env { locals = scope, breakTo = bTo, continueTo = cTo }
+    pure(None)
 
 codegenNode (ASTNode (ASTForStatement init cond iter body) _) = mdo
     scope <- gets locals
@@ -220,9 +230,8 @@ codegenNode (ASTNode (ASTForStatement init cond iter body) _) = mdo
     _ <- codegenNode init
     L.br condBB
     condBB <- L.named L.block "cond"
-    cond' <- codegenNode cond
-    case cond' of
-        None -> mdo
+    case cond of
+        (ASTNode ASTNothing _) -> mdo
             L.br loopBB
             loopBB <- L.named L.block "loop"
             modify $ \env -> env { breakTo = endBB, continueTo = iterBB }
@@ -235,8 +244,8 @@ codegenNode (ASTNode (ASTForStatement init cond iter body) _) = mdo
             modify $ \env -> env { locals = scope, breakTo = bTo, continueTo = cTo }
             pure(None)
 
-        Some c -> mdo
-            L.condBr c loopBB endBB
+        c -> mdo
+            codegenNodeConditional c loopBB endBB
             loopBB <- L.named L.block "loop"
             modify $ \env -> env { breakTo = endBB, continueTo = iterBB }
             _ <- codegenNode body

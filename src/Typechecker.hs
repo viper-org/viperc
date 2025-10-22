@@ -134,6 +134,7 @@ typecheckNode (ASTNode (ASTBinaryExpression l op r) ty') = do
                     ASTNode (ASTBinaryExpression (ASTNode (ASTCastExpression l' rType) rType) op r') destType
             else error $ "binary expression has differing types " ++ prettyPrint lType ++ " and " ++ prettyPrint rType
 
+-- todo: actually check types are valid for each op
 typecheckNode (ASTNode (ASTUnaryExpression op val) ty') = do
     let val' = typecheckNode val
     case op of
@@ -141,6 +142,8 @@ typecheckNode (ASTNode (ASTUnaryExpression op val) ty') = do
         UnaryIndirect -> ASTNode (ASTUnaryExpression op val') (getPointeeType $ ty val')
 
         UnaryMinus  -> ASTNode (ASTUnaryExpression op val') (ty val')
+
+        LogicalNot -> ASTNode (ASTUnaryExpression op val') BoolType
         
         PrefixInc  -> ASTNode (ASTUnaryExpression op val') (ty val')
         PrefixDec  -> ASTNode (ASTUnaryExpression op val') (ty val')
