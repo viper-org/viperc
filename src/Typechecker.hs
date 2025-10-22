@@ -136,6 +136,8 @@ typecheckNode (ASTNode (ASTUnaryExpression op val) ty') = do
         UnaryRef -> ASTNode (ASTUnaryExpression op val') (PointerType $ ty val')
         UnaryIndirect -> ASTNode (ASTUnaryExpression op val') (getPointeeType $ ty val')
         
+        UnaryMinus  -> ASTNode (ASTUnaryExpression op val') (ty val')
+        
         PrefixInc  -> ASTNode (ASTUnaryExpression op val') (ty val')
         PrefixDec  -> ASTNode (ASTUnaryExpression op val') (ty val')
         PostfixInc -> ASTNode (ASTUnaryExpression op val') (ty val')

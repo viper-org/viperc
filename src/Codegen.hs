@@ -365,6 +365,11 @@ codegenNode (ASTNode (ASTUnaryExpression operator operand) ty') = do
                     load' <- L.load lval' 0
                     pure (Some(load'))
 
+        UnaryMinus -> do
+            op <- codegenNode operand
+            neg <- L.sub (L.int32 0) (force op)
+            pure (Some(neg))
+
         PrefixInc -> do
             op <- codegenNode operand
             inc <- L.add (force op) (L.int32 1)

@@ -21,6 +21,7 @@ data BinaryOperator = BinaryAdd | BinarySub | BinaryMul | BinaryDiv
     deriving (Eq, Show)
 
 data UnaryOperator = UnaryRef | UnaryIndirect
+                   | UnaryMinus
                    | PrefixInc | PrefixDec | PostfixInc | PostfixDec
     deriving (Eq, Show)
 

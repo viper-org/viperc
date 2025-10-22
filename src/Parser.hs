@@ -258,6 +258,7 @@ getBinaryOperator z = Parser $ \s -> Left $ "unexpected attempt to get binary op
 getPrefixUnaryOperatorPrecedence :: Token -> Parser Int
 getPrefixUnaryOperatorPrecedence TokenAmpersand = pure(85)
 getPrefixUnaryOperatorPrecedence TokenStar = pure(85)
+getPrefixUnaryOperatorPrecedence TokenMinus = pure(85)
 getPrefixUnaryOperatorPrecedence TokenDoublePlus = pure(85)
 getPrefixUnaryOperatorPrecedence TokenDoubleMinus = pure(85)
 getPrefixUnaryOperatorPrecedence _ = pure(0)
@@ -265,6 +266,7 @@ getPrefixUnaryOperatorPrecedence _ = pure(0)
 getPrefixUnaryOperator :: Token -> Parser UnaryOperator
 getPrefixUnaryOperator TokenAmpersand = pure(UnaryRef)
 getPrefixUnaryOperator TokenStar = pure(UnaryIndirect)
+getPrefixUnaryOperator TokenMinus = pure(UnaryMinus)
 getPrefixUnaryOperator TokenDoublePlus = pure(PrefixInc)
 getPrefixUnaryOperator TokenDoubleMinus = pure(PrefixDec)
 getPrefixUnaryOperator z = Parser $ \s -> Left $ "unexpected attempt to get unary operator " ++ show z
