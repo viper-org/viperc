@@ -1,11 +1,8 @@
-void puts(char* str);
+void puts(char* s);
 
 int main(int argc, char** argv)
 {
-    puts("Hello, world!");
+    char** pArgv1 = argv + 2;
+    puts(*pArgv1);
     return 0;
-}
-
-bool z() {
-    return 1 == 2;
 }

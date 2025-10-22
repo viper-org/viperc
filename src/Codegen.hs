@@ -76,10 +76,11 @@ codegenFile decls =
             mapM_ codegenFuncDef decls
 
 codegenFuncDef :: FunctionDef -> LLVM ()
-codegenFuncDef (FunctionDef returnType name args body isProto) = mdo
+codegenFuncDef (FunctionDef typ name args body isProto) = mdo
     addLocal name funct
     scope <- gets locals
     let parms = [generateParm type' name' | (type', name') <- args]
+    let returnType = getReturnType typ
     funct <- case isProto of
         True -> L.function (AST.mkName $ cs name) parms (typeToLLVM returnType) emitProto
         False -> L.function (AST.mkName $ cs name) parms (typeToLLVM returnType) emitBody
@@ -101,16 +102,16 @@ codegenFuncDef (FunctionDef returnType name args body isProto) = mdo
         emitProto _ = pure()
 
 codegenNodeLVal :: ASTNode -> Builder CodegenOperand
-codegenNodeLVal (ASTVariableExpression ident) = do
+codegenNodeLVal (ASTNode (ASTVariableExpression ident) ty') = do
     var <- getLocal ident
     pure(Some(var))
 
-codegenNodeLVal (ASTUnaryExpression UnaryIndirect op) = do
+codegenNodeLVal (ASTNode (ASTUnaryExpression UnaryIndirect op) _) = do
     codegenNode op
 
 codegenNode :: ASTNode -> Builder CodegenOperand
-codegenNode (ASTReturnStatement value) = case value of
-    ASTNothing -> do
+codegenNode (ASTNode (ASTReturnStatement value) _) = case value of
+    (ASTNode ASTNothing _) -> do
         L.retVoid
         pure(None)
     val -> do
@@ -120,11 +121,11 @@ codegenNode (ASTReturnStatement value) = case value of
             Some (x) -> L.ret x
         pure (None)
 
-codegenNode (ASTVariableDeclaration type' name initVal) = do
+codegenNode (ASTNode (ASTVariableDeclaration type' name initVal) _) = do
     alloca <- L.alloca (typeToLLVM type') Nothing 0
     addLocal name alloca
     case initVal of
-        ASTNothing -> pure(None)
+        (ASTNode ASTNothing _) -> pure(None)
         val -> do
             x <- codegenNode val
             case x of
@@ -132,9 +133,9 @@ codegenNode (ASTVariableDeclaration type' name initVal) = do
                 Some (v) -> L.store alloca 0 v
             pure (None)
 
-codegenNode (ASTIntegerLiteral value) = pure (Some(L.int32 (fromIntegral value)))
+codegenNode (ASTNode (ASTIntegerLiteral value) ty') = pure (Some(L.int32 (fromIntegral value)))
 
-codegenNode (ASTStringLiteral value) = do
+codegenNode (ASTNode (ASTStringLiteral value) ty') = do
     let value' = value ++ "\0"
     name1 <- getUniqName
     name2 <- getUniqName
@@ -143,12 +144,12 @@ codegenNode (ASTStringLiteral value) = do
     load' <- L.load glob 0
     pure (Some(load'))
 
-codegenNode (ASTVariableExpression name) = do
+codegenNode (ASTNode (ASTVariableExpression name) ty') = do
     var <- getLocal name
     l <- L.load var 0
     pure(Some(l))
 
-codegenNode (ASTBinaryExpression l BinaryAssign r) = do
+codegenNode (ASTNode (ASTBinaryExpression l BinaryAssign r) ty') = do
     left <- codegenNodeLVal l
     right <- codegenNode r
     case left of
@@ -160,7 +161,7 @@ codegenNode (ASTBinaryExpression l BinaryAssign r) = do
                         L.store left' 0 right'
                         pure(None) -- Maybe create a load?
 
-codegenNode (ASTBinaryExpression l op r) = do
+codegenNode (ASTNode (ASTBinaryExpression l op r) ty') = do
         left <- codegenNode l
         right <- codegenNode r
         case left of
@@ -171,7 +172,8 @@ codegenNode (ASTBinaryExpression l op r) = do
                     Some (right') -> do
                         case op of
                             BinaryAdd -> do
-                                op' <- L.add left' right'
+                                op' <- if (isPointerType ty') then L.gep left' [right']
+                                else L.add left' right'
                                 pure(Some(op'))
                             BinarySub -> do
                                 op' <- L.sub left' right'
@@ -190,9 +192,9 @@ codegenNode (ASTBinaryExpression l op r) = do
                                 op' <- L.icmp L.NE left' right'
                                 pure(Some(op'))
 
-codegenNode (ASTCallExpression c params) = do
+codegenNode (ASTNode (ASTCallExpression c params) ty) = do
     case c of
-        (ASTVariableExpression ident) -> do
+        (ASTNode (ASTVariableExpression ident) ty') -> do
             callee <- getLocal ident
             params' <- mapM makeParam params
             call' <- L.call callee params'
@@ -206,7 +208,7 @@ codegenNode (ASTCallExpression c params) = do
                     None -> error "Error" -- todo: better error
                     Some x -> pure (x,[])
 
-codegenNode (ASTUnaryExpression operator operand) = do
+codegenNode (ASTNode (ASTUnaryExpression operator operand) ty') = do
     case operator of
         UnaryRef -> do
             codegenNodeLVal operand

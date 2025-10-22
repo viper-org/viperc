@@ -18,7 +18,7 @@ data BinaryOperator = BinaryAdd | BinarySub | BinaryMul | BinaryDiv
 data UnaryOperator = UnaryRef | UnaryIndirect
     deriving (Eq, Show)
 
-data ASTNode = ASTNothing
+data ASTNodeClass = ASTNothing
              | ASTReturnStatement ReturnValue
              | ASTVariableDeclaration Type Name InitialValue
              | ASTIntegerLiteral Int
@@ -29,8 +29,13 @@ data ASTNode = ASTNothing
              | ASTCallExpression Callee [Param]
              deriving (Eq, Show)
 
+data ASTNode = ASTNode {
+    clas :: ASTNodeClass,
+    ty :: Type
+} deriving (Eq, Show)
+
 data FunctionDef = FunctionDef {
-    returnType :: Type,
+    fnType :: Type,
     name :: String,
     args :: [(Type, String)],
     body :: [ASTNode],

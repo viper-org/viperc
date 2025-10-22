@@ -4,9 +4,14 @@ import Lexer
 import Types
 import AST
 
+import Data.Map as Map
+
 defaultPrecedence = 1
 
-data ParserState = ParserState { tokens :: [Token] } deriving (Eq, Show)
+data ParserState = ParserState {
+    tokens :: [Token],
+    symbols :: Map String Type -- maybe make this a proper symbol type later
+} deriving (Eq, Show)
 
 newtype Parser a = Parser
   { runParser :: ParserState -> Either String (a, ParserState) }
@@ -30,6 +35,29 @@ instance Monad Parser where
 
 instance MonadFail Parser where
   fail msg = Parser $ \s -> Left msg
+
+getSymbols :: Parser (Map String Type)
+getSymbols = Parser $ \s ->
+    case symbols s of
+        (xs) -> Right(xs, s)
+
+getSymbol :: String -> Parser Type
+getSymbol ident = do
+    syms <- getSymbols
+    case Map.lookup ident syms of
+        Just sym -> pure sym
+        Nothing -> Parser $ \s -> Left $ "Could not find symbol '" ++ ident ++ "'"
+
+addSymbol :: String -> Type -> Parser ()
+addSymbol name type' = Parser $ \s ->
+    Right((), s { symbols = Map.insert name type' (symbols s) })
+
+addSymbolZipped :: (Type, String) -> Parser ()
+addSymbolZipped (type', name) = addSymbol name type'
+
+setSymbols :: Map String Type -> Parser()
+setSymbols m = Parser $ \s ->
+    Right((), s { symbols = m })
 
 consumeTok :: Parser Token
 consumeTok = Parser $ \s ->
@@ -123,16 +151,27 @@ parseFunction = do
     _ <- expectToken TokenLeftParen
     parms <- parseParams
     _ <- expectToken TokenRightParen
+    let paramTypes = [ty | (ty, _) <- parms]
+    let fnType = FunctionType type' paramTypes
+
+    addSymbol name fnType
+
+    oldScope <- getSymbols
+
+    mapM_ addSymbolZipped parms
+
     tok <- currentTok
     case tok of
         Just TokenSemicolon -> do
             _ <- consumeTok
-            pure (FunctionDef type' name parms [] True)
+            setSymbols oldScope
+            pure (FunctionDef fnType name parms [] True)
         _ -> do
             _ <- expectToken TokenLeftBrace
             body <- parseBody
             _ <- expectToken TokenRightBrace
-            pure (FunctionDef type' name parms body False)
+            setSymbols oldScope
+            pure (FunctionDef fnType name parms body False)
 
             where
                 parseBody = do
@@ -187,7 +226,7 @@ parseExpr prec = do
                 _ <- consumeTok
                 operand <- parseExpr unaryPrec
                 operator <- getUnaryOperator op
-                pure (ASTUnaryExpression operator operand)
+                pure $ ASTNode (ASTUnaryExpression operator operand) (ty operand)
             else parsePrimary
     parseMore left
     where
@@ -207,7 +246,7 @@ parseExpr prec = do
                         else do
                             operator <- getBinaryOperator op
                             right <- parseExpr newPrec
-                            parseMore (ASTBinaryExpression l operator right)
+                            parseMore $ ASTNode (ASTBinaryExpression l operator right) (ty l)
 
 parsePrimary :: Parser ASTNode
 parsePrimary = do
@@ -215,15 +254,16 @@ parsePrimary = do
     case tok of
         Just (TokenIntegerLiteral s) -> do
             _ <- consumeTok
-            pure (ASTIntegerLiteral (read s :: Int))
+            pure $ ASTNode (ASTIntegerLiteral (read s :: Int)) IntType
 
         Just (TokenIdentifier s) -> do
             _ <- consumeTok
-            pure (ASTVariableExpression s)
+            ty <- getSymbol s
+            pure $ ASTNode (ASTVariableExpression s) ty
 
         Just (TokenStringLiteral s) -> do
             _ <- consumeTok
-            pure (ASTStringLiteral s)
+            pure $ ASTNode (ASTStringLiteral s) (PointerType CharType)
 
         Just TokenReturnKeyword -> parseReturnStatement
         Just (TokenTypeKeyword _) -> parseVariableDeclaration
@@ -231,14 +271,15 @@ parsePrimary = do
 
 parseCallExpression :: Callee -> Parser ASTNode
 parseCallExpression callee = do
+    let retType = getReturnType (ty callee)
     tok <- currentTok
     case tok of
         Nothing -> Parser $ \s -> Left $ "Expected ')' to match '('"
-        Just TokenRightParen -> pure $ ASTCallExpression callee []
+        Just TokenRightParen -> pure $ ASTNode (ASTCallExpression callee []) retType
         _ -> do
             curr <- parseExpr defaultPrecedence
             rest <- parseMore
-            pure $ ASTCallExpression callee (curr : rest)
+            pure $ ASTNode (ASTCallExpression callee (curr : rest)) retType
 
         where
             parseMore = do
@@ -257,19 +298,20 @@ parseReturnStatement = do
     _ <- expectToken TokenReturnKeyword
     tok <- currentTok
     case tok of
-        Just TokenSemicolon -> pure (ASTReturnStatement ASTNothing)
+        Just TokenSemicolon -> pure $ ASTNode (ASTReturnStatement $ ASTNode ASTNothing VoidType) VoidType
         _ -> do
             value <- parseExpr defaultPrecedence
-            pure (ASTReturnStatement value)
+            pure $ ASTNode (ASTReturnStatement value) VoidType
 
 parseVariableDeclaration :: Parser ASTNode
 parseVariableDeclaration = do
     type' <- parseType
     TokenIdentifier name <- satisfyToken isIdentifier
+    addSymbol name type'
     tok <- currentTok
     case tok of
         Just TokenEqual -> do
             _ <- consumeTok
             initVal <- parseExpr defaultPrecedence
-            pure (ASTVariableDeclaration type' name initVal)
-        _ -> pure (ASTVariableDeclaration type' name ASTNothing)
+            pure $ ASTNode (ASTVariableDeclaration type' name initVal) type'
+        _ -> pure $ ASTNode (ASTVariableDeclaration type' name (ASTNode ASTNothing VoidType)) type'
