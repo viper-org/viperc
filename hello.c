@@ -3,13 +3,11 @@ void putchar(char c);
 
 int main(int argc, char** argv)
 {
-    0[argv] = "Replaced";
-    for (char i = argc; i >= 0; --i) {
-        puts(argv[i]);
+    int x = 3;
+    switch (x) {
+        case 1: puts("x>0"); puts("x=1"); break;
+        case 3: puts("x=3");
     }
-
-    if (!(2 == 1) && 2 == 2) puts("yes");
-    putchar(65);
 
     return 0;
 }

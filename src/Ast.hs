@@ -27,12 +27,21 @@ data UnaryOperator = UnaryRef | UnaryIndirect
                    | PrefixInc | PrefixDec | PostfixInc | PostfixDec
     deriving (Eq, Show)
 
+data SwitchCaseValue = Valued ASTNode | Default
+    deriving (Eq, Show)
+
+data SwitchCase = SwitchCase {
+    caseValue :: SwitchCaseValue,
+    caseBody :: [ASTNode]
+} deriving (Eq, Show)
+
 data ASTNodeClass = ASTNothing
              | ASTReturnStatement ReturnValue
              | ASTVariableDeclaration Type String InitialValue
              | ASTIfStatement Condition Body ElseBody
              | ASTWhileStatement Condition Body
              | ASTForStatement Init Condition Iter Body
+             | ASTSwitchStatement ASTNode [SwitchCase]
              | ASTBreakStatement
              | ASTContinueStatement
              | ASTCompoundStatement [ASTNode]

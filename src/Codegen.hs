@@ -272,6 +272,30 @@ codegenNode (ASTNode ASTContinueStatement _) = do
     cTo <- gets continueTo
     codegenTerm $ L.br cTo
     pure (None)
+
+codegenNode (ASTNode (ASTSwitchStatement value cases) _) = mdo
+    bTo <- gets breakTo
+    val <- codegenNode value
+    modify $ \env -> env { breakTo = mergeBB }
+    L.br firstCond
+    (firstCond, firstCase) <- emitCases cases mergeBB val
+    modify $ \env -> env { breakTo = bTo }
+    mergeBB <- L.named L.block "merge"
+    pure(None)
+
+    where
+        emitCases [] m val = do
+            pure (m, m)
+        emitCases ((SwitchCase (Valued cond) body):xs) m val = mdo
+            (nextCond, nextCase) <- emitCases xs m val
+            condBB <- L.named L.block "caseCond"
+            c <- codegenNode cond
+            cmp <- L.icmp L.EQ (force val) (force c)
+            L.condBr cmp caseBB nextCond
+            caseBB <- L.named L.block "case"
+            mapM_ codegenNode body
+            codegenTerm $ L.br nextCase
+            pure (condBB, caseBB)
      
 codegenNode (ASTNode (ASTCompoundStatement body) _) = do
     oldScope <- gets locals

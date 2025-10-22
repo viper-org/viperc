@@ -19,11 +19,15 @@ data Token = None
     | TokenForKeyword
     | TokenBreakKeyword
     | TokenContinueKeyword
+    | TokenSwitchKeyword
+    | TokenCaseKeyword
+    | TokenDefaultKeyword
     | TokenIntegerLiteral String
     | TokenStringLiteral String
     | TokenCharLiteral Char
     | TokenSemicolon
     | TokenComma
+    | TokenColon
     | TokenEqual
     | TokenPlus
     | TokenMinus
@@ -68,6 +72,9 @@ assignKeywords ((TokenIdentifier "while"):xs)    = TokenWhileKeyword          : 
 assignKeywords ((TokenIdentifier "for"):xs)      = TokenForKeyword            : assignKeywords xs
 assignKeywords ((TokenIdentifier "break"):xs)    = TokenBreakKeyword          : assignKeywords xs
 assignKeywords ((TokenIdentifier "continue"):xs) = TokenContinueKeyword       : assignKeywords xs
+assignKeywords ((TokenIdentifier "switch"):xs)   = TokenSwitchKeyword         : assignKeywords xs
+assignKeywords ((TokenIdentifier "case"):xs)     = TokenCaseKeyword           : assignKeywords xs
+assignKeywords ((TokenIdentifier "default"):xs)  = TokenDefaultKeyword        : assignKeywords xs
 assignKeywords (x:xs) = x : assignKeywords xs
 
 tokenize :: String -> [Token]
@@ -92,6 +99,7 @@ tokenize ('[':rest) = TokenLeftBracket : tokenize rest
 tokenize (']':rest) = TokenRightBracket : tokenize rest
 tokenize (';':rest) = TokenSemicolon : tokenize rest
 tokenize (',':rest) = TokenComma : tokenize rest
+tokenize (':':rest) = TokenColon : tokenize rest
 tokenize ('=':rest) = TokenEqual : tokenize rest
 tokenize ('+':rest) = TokenPlus : tokenize rest
 tokenize ('-':rest) = TokenMinus : tokenize rest

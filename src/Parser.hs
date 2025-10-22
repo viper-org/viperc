@@ -376,6 +376,7 @@ parsePrimary = do
         Just TokenIfKeyword -> parseIfStatement
         Just TokenWhileKeyword -> parseWhileStatement
         Just TokenForKeyword -> parseForStatement
+        Just TokenSwitchKeyword -> parseSwitchStatement
         Just TokenLeftBrace -> parseCompoundStatement
 
         Just TokenBreakKeyword -> do
@@ -499,6 +500,73 @@ parseForStatement = do
     where
         isNothing (ASTNode ASTNothing _) = True
         isNothing _ = False
+
+parseSwitchStatement :: Parser ASTNode
+parseSwitchStatement = do
+    _ <- consumeTok -- switch
+    _ <- expectToken TokenLeftParen
+    value <- parseExpr defaultPrecedence
+    _ <- expectToken TokenRightParen
+    _ <- expectToken TokenLeftBrace
+
+    tok <- currentTok
+    case tok of
+        Just TokenRightBrace -> do
+            _ <- consumeTok
+            insertToken TokenSemicolon
+            pure $ ASTNode (ASTSwitchStatement value []) VoidType
+        Just TokenCaseKeyword -> do
+            _ <- consumeTok
+            val <- parseExpr defaultPrecedence
+            _ <- expectToken TokenColon
+            body <- parseBody
+            let cas = SwitchCase (Valued val) body
+            more <- parseMore
+            pure $ ASTNode (ASTSwitchStatement value (cas : more)) VoidType
+        Just TokenDefaultKeyword -> do
+            _ <- consumeTok
+            _ <- expectToken TokenColon
+            body <- parseBody
+            let cas = SwitchCase Default body
+            more <- parseMore
+            pure $ ASTNode (ASTSwitchStatement value (cas : more)) VoidType
+
+    where
+        parseBody = do
+            tok <- currentTok
+            case tok of
+                Just TokenRightBrace -> do
+                    pure []
+                Just TokenCaseKeyword -> pure []
+                _ -> do
+                    curr <- parseExpr defaultPrecedence
+                    _ <- expectToken TokenSemicolon
+                    rest <- parseBody
+                    pure (curr : rest)
+
+        parseMore = do
+            tok <- currentTok
+            case tok of
+                Just TokenRightBrace -> do
+                    _ <- consumeTok
+                    insertToken TokenSemicolon
+                    pure []
+                Just TokenCaseKeyword -> do
+                    _ <- consumeTok
+                    val <- parseExpr defaultPrecedence
+                    _ <- expectToken TokenColon
+                    body <- parseBody
+                    let cas = SwitchCase (Valued val) body
+                    more <- parseMore
+                    pure (cas : more)
+                Just TokenDefaultKeyword -> do
+                    _ <- consumeTok
+                    _ <- expectToken TokenColon
+                    body <- parseBody
+                    let cas = SwitchCase Default body
+                    more <- parseMore
+                    pure (cas : more)
+                x -> error $ show x
 
 parseCompoundStatement :: Parser ASTNode
 parseCompoundStatement = do
