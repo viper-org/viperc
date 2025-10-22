@@ -264,7 +264,10 @@ codegenNode (ASTNode (ASTCompoundStatement body) _) = do
     modify $ \env -> env { locals = oldScope }
     pure (None)
 
-codegenNode (ASTNode (ASTIntegerLiteral value) ty') = pure (Some(L.int32 (fromIntegral value)))
+codegenNode (ASTNode (ASTIntegerLiteral value) CharType)  = pure (Some(L.int8  (fromIntegral value)))
+codegenNode (ASTNode (ASTIntegerLiteral value) ShortType) = pure (Some(L.int32 (fromIntegral value)))
+codegenNode (ASTNode (ASTIntegerLiteral value) IntType)   = pure (Some(L.int32 (fromIntegral value)))
+codegenNode (ASTNode (ASTIntegerLiteral value) LongType)  = pure (Some(L.int64 (fromIntegral value)))
 
 codegenNode (ASTNode (ASTStringLiteral value) ty') = do
     let value' = value ++ "\0"

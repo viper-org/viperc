@@ -19,6 +19,7 @@ data Token = None
     | TokenContinueKeyword
     | TokenIntegerLiteral String
     | TokenStringLiteral String
+    | TokenCharLiteral Char
     | TokenSemicolon
     | TokenComma
     | TokenEqual
@@ -83,4 +84,5 @@ tokenize (c:rest) | isAlpha c = TokenIdentifier(c:takeWhile isAlphaNum rest) : t
 tokenize('"':rest) = do
     let val = takeWhile (/='"') rest
     TokenStringLiteral val : tokenize (drop 1 (dropWhile (/='"') rest))
+tokenize('\'':c:'\'':rest) = TokenCharLiteral(c) : tokenize rest
 tokenize s = [TokenError(head s)]

@@ -113,6 +113,7 @@ typecheckNode (ASTNode (ASTBinaryExpression l op r) ty') = do
             BinaryEqual -> BoolType
             BinaryNotEqual -> BoolType
             _ -> lType
+
     case op of
         BinaryAddAssign -> do
             if isPointerType lType && isIntegerType rType then (ASTNode (ASTBinaryExpression l' op r') lType)
@@ -122,8 +123,11 @@ typecheckNode (ASTNode (ASTBinaryExpression l op r) ty') = do
             if lType == rType then (ASTNode (ASTBinaryExpression l' op r') destType)
             else if (castLevel lType rType) == Implicit then
                 if typeSize lType > typeSize rType then
-                    ASTNode (ASTBinaryExpression l' op (ASTNode (ASTCastExpression r' lType) lType)) lType
-                else ASTNode (ASTBinaryExpression (ASTNode (ASTCastExpression l' rType) rType) op r') rType
+                    ASTNode (ASTBinaryExpression l' op (ASTNode (ASTCastExpression r' lType) lType)) destType
+                else if destType == lType then
+                    ASTNode (ASTBinaryExpression (ASTNode (ASTCastExpression l' rType) rType) op r') rType
+                else
+                    ASTNode (ASTBinaryExpression (ASTNode (ASTCastExpression l' rType) rType) op r') destType
             else error $ "binary expression has differing types " ++ prettyPrint lType ++ " and " ++ prettyPrint rType
 
 typecheckNode (ASTNode (ASTUnaryExpression op val) ty') = do

@@ -5,6 +5,7 @@ import Types
 import AST
 
 import Data.Map as Map
+import Data.Char
 
 defaultPrecedence = 1
 
@@ -304,6 +305,10 @@ parsePrimary = do
         Just (TokenIntegerLiteral s) -> do
             _ <- consumeTok
             pure $ ASTNode (ASTIntegerLiteral (read s :: Int)) IntType
+
+        Just (TokenCharLiteral c) -> do
+            _ <- consumeTok
+            pure $ ASTNode (ASTIntegerLiteral (ord c)) CharType
 
         Just (TokenIdentifier s) -> do
             _ <- consumeTok
