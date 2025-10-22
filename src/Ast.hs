@@ -5,6 +5,9 @@ import Types
 type Name = String
 type ReturnValue = ASTNode
 type InitialValue = ASTNode
+type Condition = ASTNode
+type Body = ASTNode
+type ElseBody = ASTNode
 type Left = ASTNode
 type Right = ASTNode
 type Callee = ASTNode
@@ -21,6 +24,7 @@ data UnaryOperator = UnaryRef | UnaryIndirect
 data ASTNodeClass = ASTNothing
              | ASTReturnStatement ReturnValue
              | ASTVariableDeclaration Type Name InitialValue
+             | ASTIfStatement Condition Body ElseBody
              | ASTIntegerLiteral Int
              | ASTStringLiteral String
              | ASTVariableExpression Name

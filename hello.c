@@ -2,7 +2,9 @@ void puts(char* s);
 
 int main(int argc, char** argv)
 {
-    char** pArgv1 = argv + 2;
-    puts(*pArgv1);
+    if (1 == 1)
+        puts("true");
+    else
+        puts("false");
     return 0;
 }

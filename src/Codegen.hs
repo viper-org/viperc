@@ -133,6 +133,34 @@ codegenNode (ASTNode (ASTVariableDeclaration type' name initVal) _) = do
                 Some (v) -> L.store alloca 0 v
             pure (None)
 
+codegenNode (ASTNode (ASTIfStatement cond body (ASTNode ASTNothing _)) _) = mdo
+    cond' <- codegenNode cond
+    case cond' of
+        None -> error $ "!"
+        Some c -> mdo
+            L.condBr c trueBB mergeBB
+            trueBB <- L.named L.block "true"
+            codegenNode body
+            L.br mergeBB
+            mergeBB <- L.named L.block "merge"
+            pure(None)
+
+codegenNode (ASTNode (ASTIfStatement cond body elseBody) _) = mdo
+    cond' <- codegenNode cond
+    case cond' of
+        None -> error $ "!"
+        Some c -> mdo
+            L.condBr c trueBB falseBB
+            trueBB <- L.named L.block "true"
+            codegenNode body
+            L.br mergeBB
+            falseBB <- L.named L.block "false"
+            codegenNode elseBody
+            L.br mergeBB
+            mergeBB <- L.named L.block "merge"
+            pure(None)
+     
+
 codegenNode (ASTNode (ASTIntegerLiteral value) ty') = pure (Some(L.int32 (fromIntegral value)))
 
 codegenNode (ASTNode (ASTStringLiteral value) ty') = do

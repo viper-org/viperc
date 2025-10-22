@@ -71,6 +71,12 @@ currentTok = Parser $ \s ->
         [] -> Right (Nothing, s)
         (x:_) -> Right (Just x, s)
 
+peek :: Parser (Maybe Token)
+peek = Parser $ \s ->
+    case tokens s of
+        (_:x:_) -> Right(Just x, s)
+        _ -> Right (Nothing, s)
+
 satisfyToken :: (Token -> Bool) -> Parser Token
 satisfyToken pred = do
     t <- consumeTok
@@ -267,6 +273,7 @@ parsePrimary = do
 
         Just TokenReturnKeyword -> parseReturnStatement
         Just (TokenTypeKeyword _) -> parseVariableDeclaration
+        Just TokenIfKeyword -> parseIfStatement
         _ -> Parser $ \s -> Left $ "Expected primary expression"
 
 parseCallExpression :: Callee -> Parser ASTNode
@@ -315,3 +322,20 @@ parseVariableDeclaration = do
             initVal <- parseExpr defaultPrecedence
             pure $ ASTNode (ASTVariableDeclaration type' name initVal) type'
         _ -> pure $ ASTNode (ASTVariableDeclaration type' name (ASTNode ASTNothing VoidType)) type'
+
+parseIfStatement :: Parser ASTNode
+parseIfStatement = do
+    _ <- consumeTok
+    _ <- expectToken TokenLeftParen
+    cond <- parseExpr defaultPrecedence
+    _ <- expectToken TokenRightParen
+    body <- parseExpr defaultPrecedence
+
+    tok <- peek
+    case tok of
+        Just TokenElseKeyword -> do
+            _ <- expectToken TokenSemicolon
+            _ <- consumeTok -- else
+            elseBody <- parseExpr defaultPrecedence
+            pure $ ASTNode (ASTIfStatement cond body elseBody) VoidType
+        _ -> pure $ ASTNode (ASTIfStatement cond body (ASTNode ASTNothing VoidType)) VoidType

@@ -11,6 +11,8 @@ data Token = None
     | TokenLeftBrace
     | TokenRightBrace
     | TokenReturnKeyword
+    | TokenIfKeyword
+    | TokenElseKeyword
     | TokenIntegerLiteral String
     | TokenStringLiteral String
     | TokenSemicolon
@@ -41,7 +43,9 @@ assignKeywords ((TokenIdentifier "int"):xs)    = TokenTypeKeyword ("int")   : as
 assignKeywords ((TokenIdentifier "long"):xs)   = TokenTypeKeyword ("long")  : assignKeywords xs
 assignKeywords ((TokenIdentifier "void"):xs)   = TokenTypeKeyword ("void")  : assignKeywords xs
 assignKeywords ((TokenIdentifier "bool"):xs)   = TokenTypeKeyword ("bool")  : assignKeywords xs
-assignKeywords ((TokenIdentifier "return"):xs) = TokenReturnKeyword : assignKeywords xs
+assignKeywords ((TokenIdentifier "return"):xs) = TokenReturnKeyword         : assignKeywords xs
+assignKeywords ((TokenIdentifier "if"):xs)     = TokenIfKeyword             : assignKeywords xs
+assignKeywords ((TokenIdentifier "else"):xs)   = TokenElseKeyword           : assignKeywords xs
 assignKeywords (x:xs) = x : assignKeywords xs
 
 tokenize :: String -> [Token]
