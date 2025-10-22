@@ -150,4 +150,19 @@ typecheckNode (ASTNode (ASTUnaryExpression op val) ty') = do
         PostfixInc -> ASTNode (ASTUnaryExpression op val') (ty val')
         PostfixDec -> ASTNode (ASTUnaryExpression op val') (ty val')
 
+typecheckNode (ASTNode (ASTCallExpression callee params) fnType) = do
+    let callee' = typecheckNode callee
+    let params' = [typecheckNode p | p <- params]
+    let argTypes = getArgumentTypes fnType
+
+    let p = map checkOne (zip params' argTypes)
+    ASTNode (ASTCallExpression callee' p) (getReturnType fnType)
+
+    where
+        checkOne (p, argT) = do
+            if (ty p) == argT then p
+            else if (castLevel (ty p) argT) == Implicit then
+                ASTNode (ASTCastExpression p argT) argT
+            else error $ "parameter with type '" ++ prettyPrint (ty p) ++ "' cannot cast to '" ++ prettyPrint argT ++ "'"
+
 typecheckNode n = n

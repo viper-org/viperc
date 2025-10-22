@@ -8,6 +8,7 @@ int main(int argc, char** argv)
     }
 
     if (!(2 == 1) && 2 == 2) puts("yes");
+    putchar(65);
 
     return 0;
 }

@@ -385,17 +385,17 @@ parsePrimary = do
 
         _ -> Parser $ \s -> Left $ "Expected primary expression"
 
+-- ASTCallExpression stores the full functiontype for typechecking which then transforms it
 parseCallExpression :: Callee -> Parser ASTNode
 parseCallExpression callee = do
-    let retType = getReturnType (ty callee)
     tok <- currentTok
     case tok of
         Nothing -> Parser $ \s -> Left $ "Expected ')' to match '('"
-        Just TokenRightParen -> pure $ ASTNode (ASTCallExpression callee []) retType
+        Just TokenRightParen -> pure $ ASTNode (ASTCallExpression callee []) (ty callee)
         _ -> do
             curr <- parseExpr defaultPrecedence
             rest <- parseMore
-            pure $ ASTNode (ASTCallExpression callee (curr : rest)) retType
+            pure $ ASTNode (ASTCallExpression callee (curr : rest)) (ty callee)
 
         where
             parseMore = do
