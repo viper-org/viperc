@@ -39,6 +39,10 @@ getReturnType :: Type -> Type
 getReturnType (FunctionType r _) = r
 getReturnType x = error $ "Attempt to get return type of non-function type " ++ show x
 
+getPointeeType :: Type -> Type
+getPointeeType (PointerType p) = p
+getPointeeType x = error $ "Attempt to get pointee type of non-pointer type " ++ show x
+
 
 prettyPrint :: Type -> String
 prettyPrint CharType = "char"

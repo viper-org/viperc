@@ -95,4 +95,10 @@ typecheckNode (ASTNode (ASTBinaryExpression l op r) ty') = do
             if (ty l') == (ty r') then (ASTNode (ASTBinaryExpression l' op r') (ty l'))
             else error $ "binary expression has differing types " ++ prettyPrint (ty l') ++ " and " ++ prettyPrint (ty r')
 
+typecheckNode (ASTNode (ASTUnaryExpression op val) ty') = do
+    let val' = typecheckNode val
+    case op of
+        UnaryRef -> ASTNode (ASTUnaryExpression op val') (PointerType $ ty val')
+        UnaryIndirect -> ASTNode (ASTUnaryExpression op val') (getPointeeType $ ty val')
+
 typecheckNode n = n

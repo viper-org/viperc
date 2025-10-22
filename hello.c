@@ -1,10 +1,12 @@
 void puts(char* s);
 
+int rfact(int n)
+{
+    if (n == 0) return 1;
+    return n * rfact(n - 1);
+}
+
 int main(int argc, char** argv)
 {
-    for (int i = 0; i != argc; i += 1) {
-        if (i == 2) break;
-        puts(*(argv + i));
-    }
-    return 0;
+    return rfact(argc);
 }
