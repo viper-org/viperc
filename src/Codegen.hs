@@ -364,6 +364,35 @@ codegenNode (ASTNode (ASTUnaryExpression operator operand) ty') = do
                 Some (lval') -> do
                     load' <- L.load lval' 0
                     pure (Some(load'))
+
+        PrefixInc -> do
+            op <- codegenNode operand
+            inc <- L.add (force op) (L.int32 1)
+            lval <- codegenNodeLVal operand
+            L.store lval 0 inc
+            pure (Some(inc))
+
+        PrefixDec -> do
+            op <- codegenNode operand
+            dec <- L.sub (force op) (L.int32 1)
+            lval <- codegenNodeLVal operand
+            L.store lval 0 dec
+            pure (Some(dec))
+
+        PostfixInc -> do
+            op <- codegenNode operand
+            inc <- L.add (force op) (L.int32 1)
+            lval <- codegenNodeLVal operand
+            L.store lval 0 inc
+            pure (op)
+
+        PostfixDec -> do
+            op <- codegenNode operand
+            dec <- L.sub (force op) (L.int32 1)
+            lval <- codegenNodeLVal operand
+            L.store lval 0 dec
+            pure (op)
+
         _ -> error $ "unimplemented unary operator " ++ show operator
 
 codegenNode (ASTNode (ASTNothing) _) = pure(None)

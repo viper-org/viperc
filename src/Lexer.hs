@@ -27,6 +27,8 @@ data Token = None
     | TokenMinus
     | TokenStar
     | TokenSlash
+    | TokenDoublePlus
+    | TokenDoubleMinus
     | TokenAmpersand
     | TokenDoubleEqual
     | TokenBangEqual
@@ -64,6 +66,8 @@ tokenize [] = []
 tokenize('=':'=':rest) = TokenDoubleEqual : tokenize rest
 tokenize('!':'=':rest) = TokenBangEqual : tokenize rest
 tokenize('+':'=':rest) = TokenPlusEqual : tokenize rest
+tokenize('+':'+':rest) = TokenDoublePlus : tokenize rest
+tokenize('-':'-':rest) = TokenDoubleMinus : tokenize rest
 tokenize('-':'=':rest) = TokenMinusEqual : tokenize rest
 tokenize ('(':rest) = TokenLeftParen : tokenize rest
 tokenize (')':rest) = TokenRightParen : tokenize rest

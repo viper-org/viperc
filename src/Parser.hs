@@ -255,15 +255,28 @@ getBinaryOperator TokenMinusEqual = pure(BinarySubAssign)
 getBinaryOperator TokenEqual = pure(BinaryAssign)
 getBinaryOperator z = Parser $ \s -> Left $ "unexpected attempt to get binary operator " ++ show z
 
-getUnaryOperatorPrecedence :: Token -> Parser Int
-getUnaryOperatorPrecedence TokenAmpersand = pure(85)
-getUnaryOperatorPrecedence TokenStar = pure(85)
-getUnaryOperatorPrecedence _ = pure(0)
+getPrefixUnaryOperatorPrecedence :: Token -> Parser Int
+getPrefixUnaryOperatorPrecedence TokenAmpersand = pure(85)
+getPrefixUnaryOperatorPrecedence TokenStar = pure(85)
+getPrefixUnaryOperatorPrecedence TokenDoublePlus = pure(85)
+getPrefixUnaryOperatorPrecedence TokenDoubleMinus = pure(85)
+getPrefixUnaryOperatorPrecedence _ = pure(0)
 
-getUnaryOperator :: Token -> Parser UnaryOperator
-getUnaryOperator TokenAmpersand = pure(UnaryRef)
-getUnaryOperator TokenStar = pure(UnaryIndirect)
-getUnaryOperator z = Parser $ \s -> Left $ "unexpected attempt to get unary operator " ++ show z
+getPrefixUnaryOperator :: Token -> Parser UnaryOperator
+getPrefixUnaryOperator TokenAmpersand = pure(UnaryRef)
+getPrefixUnaryOperator TokenStar = pure(UnaryIndirect)
+getPrefixUnaryOperator TokenDoublePlus = pure(PrefixInc)
+getPrefixUnaryOperator TokenDoubleMinus = pure(PrefixDec)
+getPrefixUnaryOperator z = Parser $ \s -> Left $ "unexpected attempt to get unary operator " ++ show z
+
+getPostfixUnaryOperatorPrecedence :: Token -> Parser Int
+getPostfixUnaryOperatorPrecedence TokenDoublePlus = pure(90)
+getPostfixUnaryOperatorPrecedence TokenDoubleMinus = pure(90)
+getPostfixUnaryOperatorPrecedence _ = pure(0)
+
+getPostfixUnaryOperator :: Token -> Parser UnaryOperator
+getPostfixUnaryOperator TokenDoublePlus = pure(PostfixInc)
+getPostfixUnaryOperator TokenDoubleMinus = pure(PostfixDec)
 
 parseExpr :: Int -> Parser ASTNode
 parseExpr prec = do
@@ -271,32 +284,44 @@ parseExpr prec = do
     left <- case tok of
         Nothing -> error "!" -- todo: proper error
         Just op -> do
-            unaryPrec <- getUnaryOperatorPrecedence op
+            unaryPrec <- getPrefixUnaryOperatorPrecedence op
             if unaryPrec >= prec then do
                 _ <- consumeTok
                 operand <- parseExpr unaryPrec
-                operator <- getUnaryOperator op
+                operator <- getPrefixUnaryOperator op
                 pure $ ASTNode (ASTUnaryExpression operator operand) (ty operand)
             else parsePrimary
-    parseMore left
+    post <- parsePost left
+    parseBin post
     where
-        parseMore l = do
+        parsePost l = do
+            tok <- currentTok
+            case tok of
+                Nothing -> pure (l)
+                Just op -> do
+                    postfixPrec <- getPostfixUnaryOperatorPrecedence op
+                    if postfixPrec < prec then pure (l)
+                    else do
+                        _ <- consumeTok
+                        operator <- getPostfixUnaryOperator op
+                        parsePost $ ASTNode (ASTUnaryExpression operator l) (ty l)
+        parseBin l = do
             tok <- currentTok
             case tok of
                 Nothing -> pure(l)
                 Just op -> do
-                    newPrec <- getBinaryOperatorPrecedence op
-                    if newPrec < prec then pure(l)
+                    binaryPrec <- getBinaryOperatorPrecedence op
+                    if binaryPrec < prec then pure(l)
                     else do
                         _ <- consumeTok
                         if op == TokenLeftParen then do
                             call <- parseCallExpression l
                             _ <- expectToken TokenRightParen
-                            parseMore call
+                            parseBin call
                         else do
                             operator <- getBinaryOperator op
-                            right <- parseExpr newPrec
-                            parseMore $ ASTNode (ASTBinaryExpression l operator right) (ty l)
+                            right <- parseExpr binaryPrec
+                            parseBin $ ASTNode (ASTBinaryExpression l operator right) (ty l)
 
 parsePrimary :: Parser ASTNode
 parsePrimary = do
