@@ -4,6 +4,7 @@ import Lexer
 import Parser
 import Codegen
 import Typechecker
+import Types
 
 import LLVM.Pretty (ppllvm)
 import Data.ByteString
@@ -17,7 +18,7 @@ import Data.Map as Map
 main :: IO()
 main = do
     contents <- Prelude.readFile "hello.c"
-    let parserOutput = runParser parseFile (ParserState (assignKeywords (tokenize contents)) Map.empty)
+    let parserOutput = runParser parseFile (ParserState (assignKeywords (tokenize contents)) VoidType Map.empty)
     case parserOutput of
         Left err -> print err
         Right (ast, state) -> do

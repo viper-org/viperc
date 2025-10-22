@@ -38,6 +38,7 @@ data ASTNodeClass = ASTNothing
              | ASTBinaryExpression Left BinaryOperator Right
              | ASTUnaryExpression UnaryOperator ASTNode
              | ASTCallExpression Callee [Param]
+             | ASTCastExpression ASTNode Type
              deriving (Eq, Show)
 
 data ASTNode = ASTNode {

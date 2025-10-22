@@ -50,6 +50,11 @@ type Builder = L.IRBuilderT LLVM
 
 data CodegenOperand = None | Some (AST.Operand)
 
+force :: CodegenOperand -> Operand
+force c = case c of
+    None -> error "!"
+    (Some x) -> x
+
 codegenTerm :: Builder() -> Builder()
 codegenTerm op = do
     hasTerm <- L.hasTerminator
@@ -359,3 +364,15 @@ codegenNode (ASTNode (ASTUnaryExpression operator operand) ty') = do
         _ -> error $ "unimplemented unary operator " ++ show operator
 
 codegenNode (ASTNode (ASTNothing) _) = pure(None)
+
+-- Y -> iX
+codegenNode (ASTNode (ASTCastExpression val toType) _) | isIntegerType toType = do
+    val' <- codegenNode val
+    let fromType = ty val
+    if toType == fromType then pure val'
+    else if (typeSize toType) > (typeSize fromType) then do
+        sext <- L.sext (force val') (typeToLLVM toType)
+        pure (Some(sext))
+    else do
+        trunc <- L.trunc (force val') (typeToLLVM toType)
+        pure (Some(trunc))

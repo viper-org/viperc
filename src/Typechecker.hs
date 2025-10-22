@@ -38,11 +38,18 @@ typecheckNode (ASTNode (ASTVariableDeclaration typ name init) ty') = do
     case typ of
         VoidType -> error $ "variable '" ++ name ++ "' has non-object type 'void'"
         x -> if x == initType then (ASTNode (ASTVariableDeclaration typ name init') ty')
-            else error $ "variable '" ++ name ++ "' has initializer of type '" ++ prettyPrint initType ++ "'"
+            else if (castLevel initType x) == Implicit then
+                    ASTNode (ASTVariableDeclaration typ name $ ASTNode (ASTCastExpression init' typ) typ) ty'
+                else
+                    error $ "variable '" ++ name ++ "' has initializer of type '" ++ prettyPrint initType ++ "'"
 
-typecheckNode (ASTNode (ASTReturnStatement val) _) = do
-    let retvalType = typecheckNode val
-    (ASTNode (ASTReturnStatement val) VoidType) -- todo: check if retvalType matches the current function's return type
+typecheckNode (ASTNode (ASTReturnStatement val) retType) = do
+    let val' = typecheckNode val
+    let valType = ty val'
+    if valType == retType then ASTNode (ASTReturnStatement val') retType
+    else if (castLevel valType retType) == Implicit then
+        ASTNode (ASTReturnStatement (ASTNode (ASTCastExpression val' retType) retType)) retType
+    else error $ "cannot return type '" ++ prettyPrint valType ++ "' in place of ' " ++ prettyPrint retType ++ "'"
 
 typecheckNode (ASTNode (ASTIfStatement cond body elseBody) t) = do
     let cond' = typecheckNode cond
@@ -91,25 +98,33 @@ typecheckNode (ASTNode (ASTBinaryExpression l BinaryAdd r) ty') = do
             else
                 if isIntegerType rType && lType == rType then (ASTNode (ASTBinaryExpression l' BinaryAdd r') lType)
                 else if isPointerType rType then (ASTNode (ASTBinaryExpression l' BinaryAdd r') rType)
+                else if (castLevel lType rType) == Implicit then
+                    if typeSize lType > typeSize rType then
+                        ASTNode (ASTBinaryExpression l' BinaryAdd (ASTNode (ASTCastExpression r' lType) lType)) lType
+                    else ASTNode (ASTBinaryExpression (ASTNode (ASTCastExpression l' rType) rType) BinaryAdd r') rType
                 else error $ "binary expression has invalid types " ++ prettyPrint lType ++ " and " ++ prettyPrint rType
 
 typecheckNode (ASTNode (ASTBinaryExpression l op r) ty') = do
     let l' = typecheckNode l
     let r' = typecheckNode r
+    let lType = ty l'
+    let rType = ty r'
+    let destType = case op of
+            BinaryEqual -> BoolType
+            BinaryNotEqual -> BoolType
+            _ -> lType
     case op of
-        BinaryEqual -> do
-            if (ty l') == (ty r') then (ASTNode (ASTBinaryExpression l' op r') BoolType)
-            else error $ "binary expression has differing types " ++ prettyPrint (ty l') ++ " and " ++ prettyPrint (ty r')
-        BinaryNotEqual -> do
-            if (ty l') == (ty r') then (ASTNode (ASTBinaryExpression l' op r') BoolType)
-            else error $ "binary expression has differing types " ++ prettyPrint (ty l') ++ " and " ++ prettyPrint (ty r')
         BinaryAddAssign -> do
-            if isPointerType (ty l') && isIntegerType (ty r') then (ASTNode (ASTBinaryExpression l' op r') (ty l'))
-            else if (ty l') == (ty r') && isIntegerType (ty l') then (ASTNode (ASTBinaryExpression l' op r') (ty l'))
-            else error $ "binary expression has differing types " ++ prettyPrint (ty l') ++ " and " ++ prettyPrint (ty r')
+            if isPointerType lType && isIntegerType rType then (ASTNode (ASTBinaryExpression l' op r') lType)
+            else if lType == rType && isIntegerType lType then (ASTNode (ASTBinaryExpression l' op r') lType)
+            else error $ "binary expression has differing types " ++ prettyPrint lType ++ " and " ++ prettyPrint rType
         _ -> do
-            if (ty l') == (ty r') then (ASTNode (ASTBinaryExpression l' op r') (ty l'))
-            else error $ "binary expression has differing types " ++ prettyPrint (ty l') ++ " and " ++ prettyPrint (ty r')
+            if lType == rType then (ASTNode (ASTBinaryExpression l' op r') destType)
+            else if (castLevel lType rType) == Implicit then
+                if typeSize lType > typeSize rType then
+                    ASTNode (ASTBinaryExpression l' op (ASTNode (ASTCastExpression r' lType) lType)) lType
+                else ASTNode (ASTBinaryExpression (ASTNode (ASTCastExpression l' rType) rType) op r') rType
+            else error $ "binary expression has differing types " ++ prettyPrint lType ++ " and " ++ prettyPrint rType
 
 typecheckNode (ASTNode (ASTUnaryExpression op val) ty') = do
     let val' = typecheckNode val

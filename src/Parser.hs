@@ -10,6 +10,7 @@ defaultPrecedence = 1
 
 data ParserState = ParserState {
     tokens :: [Token],
+    currentReturnType :: Type,
     symbols :: Map String Type -- maybe make this a proper symbol type later
 } deriving (Eq, Show)
 
@@ -35,6 +36,15 @@ instance Monad Parser where
 
 instance MonadFail Parser where
   fail msg = Parser $ \s -> Left msg
+
+setReturnType :: Type -> Parser()
+setReturnType t = Parser $ \s ->
+    Right((), s { currentReturnType = t })
+
+getCurrentReturnType :: Parser Type
+getCurrentReturnType = Parser $ \s ->
+    case currentReturnType s of
+        x -> Right(x, s)
 
 getSymbols :: Parser (Map String Type)
 getSymbols = Parser $ \s ->
@@ -175,8 +185,8 @@ parseFunction type' name = do
     let paramTypes = [ty | (ty, _) <- parms]
     let fnType = FunctionType type' paramTypes
 
+    setReturnType type'
     addSymbol name fnType
-
     oldScope <- getSymbols
 
     mapM_ addSymbolZipped parms
@@ -353,15 +363,17 @@ parseCallExpression callee = do
                         pure (curr : rest)
                     _ -> Parser $ \s -> Left $ "Expected ')' to match '('"
 
+-- ASTReturnStatement type field stores it's function's return type for later checking
 parseReturnStatement :: Parser ASTNode
 parseReturnStatement = do
     _ <- expectToken TokenReturnKeyword
+    retType <- getCurrentReturnType
     tok <- currentTok
     case tok of
-        Just TokenSemicolon -> pure $ ASTNode (ASTReturnStatement $ ASTNode ASTNothing VoidType) VoidType
+        Just TokenSemicolon -> pure $ ASTNode (ASTReturnStatement $ ASTNode ASTNothing VoidType) retType
         _ -> do
             value <- parseExpr defaultPrecedence
-            pure $ ASTNode (ASTReturnStatement value) VoidType
+            pure $ ASTNode (ASTReturnStatement value) retType
 
 parseVariableDeclaration :: Parser ASTNode
 parseVariableDeclaration = do
