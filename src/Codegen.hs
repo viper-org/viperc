@@ -160,6 +160,11 @@ codegenNode (ASTNode (ASTIfStatement cond body elseBody) _) = mdo
             mergeBB <- L.named L.block "merge"
             pure(None)
      
+codegenNode (ASTNode (ASTCompoundStatement body) _) = do
+    oldScope <- gets locals
+    mapM_ codegenNode body
+    modify $ \env -> env { locals = oldScope }
+    pure (None)
 
 codegenNode (ASTNode (ASTIntegerLiteral value) ty') = pure (Some(L.int32 (fromIntegral value)))
 

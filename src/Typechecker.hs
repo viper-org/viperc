@@ -28,6 +28,19 @@ typecheckNode (ASTNode (ASTReturnStatement val) _) = do
     let retvalType = typecheckNode val
     (ASTNode (ASTReturnStatement val) VoidType) -- todo: check if retvalType matches the current function's return type
 
+typecheckNode (ASTNode (ASTIfStatement cond body elseBody) t) = do
+    let cond' = typecheckNode cond
+    let body' = typecheckNode body
+    let elseBody' = typecheckNode elseBody
+
+    case (ty cond') of
+        BoolType -> (ASTNode (ASTIfStatement cond' body' elseBody') t)
+        x -> error $ "if-statement has non-boolean condition type '" ++ prettyPrint x ++ "'"
+
+typecheckNode (ASTNode (ASTCompoundStatement body) t) = do
+    let body' = map typecheckNode body
+    (ASTNode (ASTCompoundStatement body') t)
+
 typecheckNode (ASTNode (ASTBinaryExpression l BinaryAdd r) ty') = do
     let l' = typecheckNode l
     let r' = typecheckNode r
@@ -48,6 +61,12 @@ typecheckNode (ASTNode (ASTBinaryExpression l op r) ty') = do
     let l' = typecheckNode l
     let r' = typecheckNode r
     case op of
+        BinaryEqual -> do
+            if (ty l') == (ty r') then (ASTNode (ASTBinaryExpression l' op r') BoolType)
+            else error $ "binary expression has differing types " ++ prettyPrint (ty l') ++ " and " ++ prettyPrint (ty r')
+        BinaryNotEqual -> do
+            if (ty l') == (ty r') then (ASTNode (ASTBinaryExpression l' op r') BoolType)
+            else error $ "binary expression has differing types " ++ prettyPrint (ty l') ++ " and " ++ prettyPrint (ty r')
         _ -> do
             if (ty l') == (ty r') then (ASTNode (ASTBinaryExpression l' op r') (ty l'))
             else error $ "binary expression has differing types " ++ prettyPrint (ty l') ++ " and " ++ prettyPrint (ty r')

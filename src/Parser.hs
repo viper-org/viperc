@@ -89,6 +89,9 @@ expectToken z = do
     if t == z then pure ()
     else Parser $ \s -> Left $ "expected " ++ show z ++ ", found " ++ show t -- Todo: better error
 
+insertToken :: Token -> Parser () -- for compound statements to insert a semicolon
+insertToken tok = Parser $ \s -> Right ((), s {tokens = (tok : tokens s)})
+
 parseType :: Parser (Type)
 parseType = do
     tok <- currentTok
@@ -274,6 +277,7 @@ parsePrimary = do
         Just TokenReturnKeyword -> parseReturnStatement
         Just (TokenTypeKeyword _) -> parseVariableDeclaration
         Just TokenIfKeyword -> parseIfStatement
+        Just TokenLeftBrace -> parseCompoundStatement
         _ -> Parser $ \s -> Left $ "Expected primary expression"
 
 parseCallExpression :: Callee -> Parser ASTNode
@@ -339,3 +343,31 @@ parseIfStatement = do
             elseBody <- parseExpr defaultPrecedence
             pure $ ASTNode (ASTIfStatement cond body elseBody) VoidType
         _ -> pure $ ASTNode (ASTIfStatement cond body (ASTNode ASTNothing VoidType)) VoidType
+
+parseCompoundStatement :: Parser ASTNode
+parseCompoundStatement = do
+    _ <- consumeTok -- {
+    tok <- currentTok
+    case tok of
+        Just TokenRightBrace -> do
+            _ <- consumeTok
+            insertToken TokenSemicolon
+            pure $ ASTNode (ASTCompoundStatement []) VoidType
+        _ -> do
+            curr <- parseExpr defaultPrecedence
+            _ <- expectToken TokenSemicolon
+            rest <- parseMore
+            _ <- expectToken TokenRightBrace
+            insertToken TokenSemicolon
+            pure $ ASTNode (ASTCompoundStatement (curr : rest)) VoidType
+
+        where
+            parseMore = do
+                tok <- currentTok
+                case tok of
+                    Just TokenRightBrace -> pure []
+                    _ -> do
+                        curr <- parseExpr defaultPrecedence
+                        _ <- expectToken TokenSemicolon
+                        rest <- parseMore
+                        pure (curr : rest)
