@@ -16,6 +16,7 @@ type Param = ASTNode
 
 data BinaryOperator = BinaryAdd | BinarySub | BinaryMul | BinaryDiv
                     | BinaryEqual | BinaryNotEqual | BinaryLessThan | BinaryGreaterThan | BinaryLessEqual | BinaryGreaterEqual
+                    | BinaryIndex
                     | LogicalAnd | LogicalOr
                     | BinaryAssign
                     | BinaryAddAssign | BinarySubAssign

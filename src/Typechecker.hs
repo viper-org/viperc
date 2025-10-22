@@ -104,6 +104,22 @@ typecheckNode (ASTNode (ASTBinaryExpression l BinaryAdd r) ty') = do
                     else ASTNode (ASTBinaryExpression (ASTNode (ASTCastExpression l' rType) rType) BinaryAdd r') rType
                 else error $ "binary expression has invalid types " ++ prettyPrint lType ++ " and " ++ prettyPrint rType
 
+typecheckNode (ASTNode (ASTBinaryExpression l BinaryIndex r) ty') = do
+    let l' = typecheckNode l
+    let r' = typecheckNode r
+    let lType = ty l'
+    let rType = ty r'
+
+    if isPointerType lType then
+        if isIntegerType rType then
+            (ASTNode (ASTBinaryExpression l' BinaryIndex r') (getPointeeType lType))
+        else error $ "index expression has invalid types " ++ prettyPrint lType ++ " and " ++ prettyPrint rType
+    else if isPointerType rType then
+        if isIntegerType lType then
+            (ASTNode (ASTBinaryExpression r' BinaryIndex l') (getPointeeType rType))
+        else error $ "index expression has invalid types " ++ prettyPrint lType ++ " and " ++ prettyPrint rType
+    else error $ "index expression has invalid types " ++ prettyPrint lType ++ " and " ++ prettyPrint rType
+
 typecheckNode (ASTNode (ASTBinaryExpression l op r) ty') = do
     let l' = typecheckNode l
     let r' = typecheckNode r

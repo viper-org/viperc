@@ -232,6 +232,7 @@ parseGlobalVar type' name = do
 
 getBinaryOperatorPrecedence :: Token -> Parser Int
 getBinaryOperatorPrecedence TokenLeftParen = pure(90)
+getBinaryOperatorPrecedence TokenLeftBracket = pure(90)
 getBinaryOperatorPrecedence TokenStar = pure(75)
 getBinaryOperatorPrecedence TokenSlash = pure(75)
 getBinaryOperatorPrecedence TokenPlus = pure(70)
@@ -334,6 +335,10 @@ parseExpr prec = do
                             call <- parseCallExpression l
                             _ <- expectToken TokenRightParen
                             parseBin call
+                        else if op == TokenLeftBracket then do
+                            index <- parseIndexExpression l
+                            _ <- expectToken TokenRightBracket
+                            parseBin index
                         else do
                             operator <- getBinaryOperator op
                             right <- parseExpr binaryPrec
@@ -408,6 +413,15 @@ parseCallExpression callee = do
                         rest <- parseMore
                         pure (curr : rest)
                     _ -> Parser $ \s -> Left $ "Expected ')' to match '('"
+
+parseIndexExpression :: ASTNode -> Parser ASTNode
+parseIndexExpression left = do
+    tok <- currentTok
+    case tok of
+        Nothing -> Parser $ \s -> Left $ "Expected ']' to match '['"
+        _ -> do
+            right <- parseExpr defaultPrecedence
+            pure $ ASTNode (ASTBinaryExpression left BinaryIndex right) (ty left)
 
 -- ASTReturnStatement type field stores it's function's return type for later checking
 parseReturnStatement :: Parser ASTNode

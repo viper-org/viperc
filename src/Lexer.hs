@@ -10,6 +10,8 @@ data Token = None
     | TokenRightParen
     | TokenLeftBrace
     | TokenRightBrace
+    | TokenLeftBracket
+    | TokenRightBracket
     | TokenReturnKeyword
     | TokenIfKeyword
     | TokenElseKeyword
@@ -86,6 +88,8 @@ tokenize ('(':rest) = TokenLeftParen : tokenize rest
 tokenize (')':rest) = TokenRightParen : tokenize rest
 tokenize ('{':rest) = TokenLeftBrace : tokenize rest
 tokenize ('}':rest) = TokenRightBrace : tokenize rest
+tokenize ('[':rest) = TokenLeftBracket : tokenize rest
+tokenize (']':rest) = TokenRightBracket : tokenize rest
 tokenize (';':rest) = TokenSemicolon : tokenize rest
 tokenize (',':rest) = TokenComma : tokenize rest
 tokenize ('=':rest) = TokenEqual : tokenize rest

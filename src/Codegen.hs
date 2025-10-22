@@ -138,6 +138,12 @@ codegenNodeLVal (ASTNode (ASTUnaryExpression UnaryIndirect op) _) = do
         None -> error "!"
         (Some x) -> pure x
 
+codegenNodeLVal (ASTNode (ASTBinaryExpression left BinaryIndex right) _) = do
+    l <- codegenNode left
+    r <- codegenNode right
+    gep <- L.gep (force l) [force r]
+    pure gep
+
 codegenNodeConstant :: ASTNode -> LLVM C.Constant
 codegenNodeConstant (ASTNode (ASTIntegerLiteral i) _) = pure $ C.Int (fromIntegral i) (fromIntegral i)
 
@@ -355,6 +361,11 @@ codegenNode (ASTNode (ASTBinaryExpression l op r) ty') = do
                             BinaryGreaterEqual -> do
                                 op' <- L.icmp L.SGE left' right'
                                 pure(Some(op'))
+
+                            BinaryIndex -> do
+                                gep <- L.gep left' [right']
+                                load <- L.load gep 0
+                                pure(Some(load))
 
 codegenNode (ASTNode (ASTCallExpression c params) ty) = do
     case c of
