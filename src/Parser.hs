@@ -201,6 +201,8 @@ getBinaryOperatorPrecedence TokenPlus = pure(70)
 getBinaryOperatorPrecedence TokenMinus = pure(70)
 getBinaryOperatorPrecedence TokenDoubleEqual = pure(50)
 getBinaryOperatorPrecedence TokenBangEqual = pure(50)
+getBinaryOperatorPrecedence TokenPlusEqual = pure(20)
+getBinaryOperatorPrecedence TokenMinusEqual = pure(20)
 getBinaryOperatorPrecedence TokenEqual = pure(20)
 getBinaryOperatorPrecedence _ = pure(0)
 
@@ -211,6 +213,8 @@ getBinaryOperator TokenPlus = pure(BinaryAdd)
 getBinaryOperator TokenMinus = pure(BinarySub)
 getBinaryOperator TokenDoubleEqual = pure(BinaryEqual)
 getBinaryOperator TokenBangEqual = pure(BinaryNotEqual)
+getBinaryOperator TokenPlusEqual = pure(BinaryAddAssign)
+getBinaryOperator TokenMinusEqual = pure(BinarySubAssign)
 getBinaryOperator TokenEqual = pure(BinaryAssign)
 getBinaryOperator z = Parser $ \s -> Left $ "unexpected attempt to get binary operator " ++ show z
 
@@ -273,6 +277,12 @@ parsePrimary = do
         Just (TokenStringLiteral s) -> do
             _ <- consumeTok
             pure $ ASTNode (ASTStringLiteral s) (PointerType CharType)
+
+        Just TokenLeftParen -> do
+            _ <- consumeTok
+            e <- parseExpr defaultPrecedence
+            _ <- expectToken TokenRightParen
+            pure e
 
         Just TokenReturnKeyword -> parseReturnStatement
         Just (TokenTypeKeyword _) -> parseVariableDeclaration

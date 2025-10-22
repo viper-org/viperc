@@ -16,6 +16,7 @@ type Param = ASTNode
 data BinaryOperator = BinaryAdd | BinarySub | BinaryMul | BinaryDiv
                     | BinaryEqual | BinaryNotEqual
                     | BinaryAssign
+                    | BinaryAddAssign | BinarySubAssign
     deriving (Eq, Show)
 
 data UnaryOperator = UnaryRef | UnaryIndirect

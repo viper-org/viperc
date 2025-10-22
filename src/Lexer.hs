@@ -26,6 +26,8 @@ data Token = None
     | TokenAmpersand
     | TokenDoubleEqual
     | TokenBangEqual
+    | TokenPlusEqual
+    | TokenMinusEqual
     deriving(Eq, Show)
 
 isType :: Token -> Bool
@@ -54,6 +56,8 @@ tokenize :: String -> [Token]
 tokenize [] = []
 tokenize('=':'=':rest) = TokenDoubleEqual : tokenize rest
 tokenize('!':'=':rest) = TokenBangEqual : tokenize rest
+tokenize('+':'=':rest) = TokenPlusEqual : tokenize rest
+tokenize('-':'=':rest) = TokenMinusEqual : tokenize rest
 tokenize ('(':rest) = TokenLeftParen : tokenize rest
 tokenize (')':rest) = TokenRightParen : tokenize rest
 tokenize ('{':rest) = TokenLeftBrace : tokenize rest

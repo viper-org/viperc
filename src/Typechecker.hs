@@ -75,6 +75,10 @@ typecheckNode (ASTNode (ASTBinaryExpression l op r) ty') = do
         BinaryNotEqual -> do
             if (ty l') == (ty r') then (ASTNode (ASTBinaryExpression l' op r') BoolType)
             else error $ "binary expression has differing types " ++ prettyPrint (ty l') ++ " and " ++ prettyPrint (ty r')
+        BinaryAddAssign -> do
+            if isPointerType (ty l') && isIntegerType (ty r') then (ASTNode (ASTBinaryExpression l' op r') (ty l'))
+            else if (ty l') == (ty r') && isIntegerType (ty l') then (ASTNode (ASTBinaryExpression l' op r') (ty l'))
+            else error $ "binary expression has differing types " ++ prettyPrint (ty l') ++ " and " ++ prettyPrint (ty r')
         _ -> do
             if (ty l') == (ty r') then (ASTNode (ASTBinaryExpression l' op r') (ty l'))
             else error $ "binary expression has differing types " ++ prettyPrint (ty l') ++ " and " ++ prettyPrint (ty r')

@@ -101,13 +101,16 @@ codegenFuncDef (FunctionDef typ name args body isProto) = mdo
                     addLocal name' alloca
         emitProto _ = pure()
 
-codegenNodeLVal :: ASTNode -> Builder CodegenOperand
+codegenNodeLVal :: ASTNode -> Builder AST.Operand
 codegenNodeLVal (ASTNode (ASTVariableExpression ident) ty') = do
     var <- getLocal ident
-    pure(Some(var))
+    pure(var)
 
 codegenNodeLVal (ASTNode (ASTUnaryExpression UnaryIndirect op) _) = do
-    codegenNode op
+    z <- codegenNode op
+    case z of
+        None -> error "!"
+        (Some x) -> pure x
 
 codegenNode :: ASTNode -> Builder CodegenOperand
 codegenNode (ASTNode (ASTReturnStatement value) _) = case value of
@@ -199,14 +202,11 @@ codegenNode (ASTNode (ASTVariableExpression name) ty') = do
 codegenNode (ASTNode (ASTBinaryExpression l BinaryAssign r) ty') = do
     left <- codegenNodeLVal l
     right <- codegenNode r
-    case left of
-            None -> error "unexpected node in binary expression" -- todo: better error
-            Some (left') -> do
-                case right of
-                    None -> error "unexpected node in binary expression" -- todo: better error
-                    Some (right') -> do
-                        L.store left' 0 right'
-                        pure(None) -- Maybe create a load?
+    case right of
+        None -> error "unexpected node in binary expression" -- todo: better error
+        Some (right') -> do
+            L.store left 0 right'
+            pure(None) -- Maybe create a load?
 
 codegenNode (ASTNode (ASTBinaryExpression l op r) ty') = do
         left <- codegenNode l
@@ -219,9 +219,21 @@ codegenNode (ASTNode (ASTBinaryExpression l op r) ty') = do
                     Some (right') -> do
                         case op of
                             BinaryAdd -> do
-                                op' <- if (isPointerType ty') then L.gep left' [right']
+                                op' <- if (isPointerType $ ty l) then L.gep left' [right']
+                                else if (isPointerType $ ty r) then L.gep right' [left']
                                 else L.add left' right'
                                 pure(Some(op'))
+                            BinaryAddAssign -> do
+                                op' <- if (isPointerType $ ty l) then L.gep left' [right']
+                                else L.add left' right'
+                                loc <- codegenNodeLVal l
+                                _ <- L.store loc 0 op'
+                                pure(None)
+                            BinarySubAssign -> do
+                                op' <- L.sub left' right'
+                                loc <- codegenNodeLVal l
+                                _ <- L.store loc 0 op'
+                                pure(None)
                             BinarySub -> do
                                 op' <- L.sub left' right'
                                 pure(Some(op'))
@@ -258,7 +270,8 @@ codegenNode (ASTNode (ASTCallExpression c params) ty) = do
 codegenNode (ASTNode (ASTUnaryExpression operator operand) ty') = do
     case operator of
         UnaryRef -> do
-            codegenNodeLVal operand
+            lval <- codegenNodeLVal operand
+            pure (Some lval)
 
         UnaryIndirect -> do
             lval <- codegenNode operand
