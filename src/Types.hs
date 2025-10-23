@@ -51,6 +51,7 @@ typeToLLVM ShortType = AST.i16
 typeToLLVM IntType   = AST.i32
 typeToLLVM LongType  = AST.i64
 typeToLLVM BoolType  = AST.i1
+typeToLLVM (PointerType VoidType) = AST.ptr AST.i8
 typeToLLVM (PointerType p) = AST.ptr $ typeToLLVM p
 typeToLLVM (ArrayType p len) = AST.ArrayType (fromIntegral len) (typeToLLVM p)
 typeToLLVM (FunctionType r ps) = AST.FunctionType (typeToLLVM r) [typeToLLVM p | p <- ps] (or [isVarArgType p | p <- ps])

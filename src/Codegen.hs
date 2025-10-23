@@ -573,3 +573,12 @@ codegenNode (ASTNode (ASTCastExpression val toType) _) | isIntegerType toType = 
     else do
         trunc <- L.trunc (force val') (typeToLLVM toType)
         pure (Some(trunc))
+
+codegenNode (ASTNode (ASTCastExpression val toType) _) | isPointerType toType = do
+    val' <- codegenNode val
+    let fromType = ty val
+    if toType == fromType then pure val'
+    else if (isPointerType fromType) then do
+        cast <- L.bitcast (force val') (typeToLLVM toType)
+        pure (Some cast)
+    else pure(None)
