@@ -440,14 +440,30 @@ parseVariableDeclaration :: Parser ASTNode
 parseVariableDeclaration = do
     type' <- parseType
     TokenIdentifier name <- satisfyToken isIdentifier
-    addSymbol name type'
-    tok <- currentTok
-    case tok of
-        Just TokenEqual -> do
-            _ <- consumeTok
-            initVal <- parseExpr defaultPrecedence
-            pure $ ASTNode (ASTVariableDeclaration type' name initVal) type'
-        _ -> pure $ ASTNode (ASTVariableDeclaration type' name (ASTNode ASTNothing VoidType)) type'
+    parseRest name type'
+
+    where
+        parseRest name type' = do
+            tok <- currentTok
+            case tok of
+                Just TokenLeftBracket -> do
+                    _ <- consumeTok
+                    (TokenIntegerLiteral s) <- satisfyToken isIntegerLiteral
+                    _ <- expectToken TokenRightBracket
+                    parseRest name (ArrayType type' (read s :: Int))
+
+                Just TokenEqual -> do
+                    _ <- consumeTok
+                    initVal <- parseExpr defaultPrecedence
+                    addSymbol name type'
+                    pure $ ASTNode (ASTVariableDeclaration type' name initVal) type'
+
+                _ -> do
+                    addSymbol name type'
+                    pure $ ASTNode (ASTVariableDeclaration type' name (ASTNode ASTNothing VoidType)) type'
+
+        isIntegerLiteral (TokenIntegerLiteral _) = True
+        isIntegerLiteral _ = False
 
 parseIfStatement :: Parser ASTNode
 parseIfStatement = do

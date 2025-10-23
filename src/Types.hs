@@ -7,9 +7,11 @@ data CastLevel = Implicit | Explicit | Disallowed
 
 type ReturnType = Type
 type ParameterType = Type
+type Length = Int
 
 data Type = VoidType | CharType | ShortType | IntType | LongType | BoolType
-          | PointerType Type | FunctionType ReturnType [ParameterType]
+          | PointerType Type | ArrayType Type Length
+          | FunctionType ReturnType [ParameterType]
     deriving (Eq, Show)
 
 -- From -> To
@@ -30,6 +32,7 @@ typeToLLVM IntType   = AST.i32
 typeToLLVM LongType  = AST.i64
 typeToLLVM BoolType  = AST.i1
 typeToLLVM (PointerType p) = AST.ptr $ typeToLLVM p
+typeToLLVM (ArrayType p len) = AST.ArrayType (fromIntegral len) (typeToLLVM p)
 typeToLLVM (FunctionType r ps) = AST.FunctionType (typeToLLVM r) [typeToLLVM p | p <- ps] False
 
 typeSize :: Type -> Int
@@ -40,6 +43,7 @@ typeSize IntType = 32
 typeSize LongType = 64
 typeSize BoolType = 1
 typeSize (PointerType _) = 64
+typeSize (ArrayType e n) = (typeSize e) * n
 typeSize (FunctionType _ _) = 0
 
 isIntegerType :: Type -> Bool
@@ -48,6 +52,10 @@ isIntegerType ShortType = True
 isIntegerType IntType = True
 isIntegerType LongType = True
 isIntegerType _ = False
+
+isArrayType :: Type -> Bool
+isArrayType (ArrayType _ _) = True
+isArrayType _ = False
 
 isPointerType :: Type -> Bool
 isPointerType (PointerType _) = True

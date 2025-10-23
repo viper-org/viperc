@@ -110,15 +110,19 @@ typecheckNode (ASTNode (ASTBinaryExpression l BinaryIndex r) ty') = do
     let lType = ty l'
     let rType = ty r'
 
-    if isPointerType lType then
+    if isPointerType lType || isArrayType lType then
         if isIntegerType rType then
-            (ASTNode (ASTBinaryExpression l' BinaryIndex r') (getPointeeType lType))
+            (ASTNode (ASTBinaryExpression l' BinaryIndex r') (getElementType lType))
         else error $ "index expression has invalid types " ++ prettyPrint lType ++ " and " ++ prettyPrint rType
-    else if isPointerType rType then
+    else if isPointerType rType || isArrayType rType then
         if isIntegerType lType then
-            (ASTNode (ASTBinaryExpression r' BinaryIndex l') (getPointeeType rType))
+            (ASTNode (ASTBinaryExpression r' BinaryIndex l') (getElementType rType))
         else error $ "index expression has invalid types " ++ prettyPrint lType ++ " and " ++ prettyPrint rType
     else error $ "index expression has invalid types " ++ prettyPrint lType ++ " and " ++ prettyPrint rType
+
+    where
+        getElementType (PointerType p) = p
+        getElementType (ArrayType e l) = e
 
 typecheckNode (ASTNode (ASTBinaryExpression l op r) ty') = do
     let l' = typecheckNode l

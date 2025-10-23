@@ -138,11 +138,20 @@ codegenNodeLVal (ASTNode (ASTUnaryExpression UnaryIndirect op) _) = do
         None -> error "!"
         (Some x) -> pure x
 
-codegenNodeLVal (ASTNode (ASTBinaryExpression left BinaryIndex right) _) = do
-    l <- codegenNode left
-    r <- codegenNode right
-    gep <- L.gep (force l) [force r]
-    pure gep
+codegenNodeLVal (ASTNode (ASTBinaryExpression l BinaryIndex r) _) = do
+    case (ty l) of
+        (Types.PointerType _) -> do
+            left <- codegenNode l
+            right <- codegenNode r
+            gep <- L.gep (force left) [force right]
+            pure gep
+
+        (Types.ArrayType _ _) -> do
+            left <- codegenNodeLVal l
+            right <- codegenNode r
+            gep <- L.gep left [force right, (L.int32 0)]
+            load <- L.load gep 0
+            pure gep
 
 codegenNodeConstant :: ASTNode -> LLVM C.Constant
 codegenNodeConstant (ASTNode (ASTIntegerLiteral i) _) = pure $ C.Int (fromIntegral i) (fromIntegral i)
@@ -338,65 +347,76 @@ codegenNode (ASTNode (ASTBinaryExpression l BinaryAssign r) ty') = do
             L.store left 0 right'
             pure(None) -- Maybe create a load?
 
+codegenNode (ASTNode (ASTBinaryExpression l BinaryIndex r) ty') = do
+    case (ty l) of
+        (Types.PointerType _) -> do
+            left <- codegenNode l
+            right <- codegenNode r
+            gep <- L.gep (force left) [force right]
+            load <- L.load gep 0
+            pure(Some(load))
+
+        (Types.ArrayType _ _) -> do
+            left <- codegenNodeLVal l
+            right <- codegenNode r
+            gep <- L.gep left [force right, (L.int32 0)]
+            load <- L.load gep 0
+            pure(Some(load))
+
 codegenNode (ASTNode (ASTBinaryExpression l op r) ty') = do
-        left <- codegenNode l
-        right <- codegenNode r
-        case left of
-            None -> error "unexpected node in binary expression" -- todo: better error
-            Some (left') -> do
-                case right of
-                    None -> error "unexpected node in binary expression" -- todo: better error
-                    Some (right') -> do
-                        case op of
-                            BinaryAdd -> do
-                                op' <- if (isPointerType $ ty l) then L.gep left' [right']
-                                else if (isPointerType $ ty r) then L.gep right' [left']
-                                else L.add left' right'
-                                pure(Some(op'))
-                            BinaryAddAssign -> do
-                                op' <- if (isPointerType $ ty l) then L.gep left' [right']
-                                else L.add left' right'
-                                loc <- codegenNodeLVal l
-                                _ <- L.store loc 0 op'
-                                pure(None)
-                            BinarySubAssign -> do
-                                op' <- L.sub left' right'
-                                loc <- codegenNodeLVal l
-                                _ <- L.store loc 0 op'
-                                pure(None)
-                            BinarySub -> do
-                                op' <- L.sub left' right'
-                                pure(Some(op'))
-                            BinaryMul -> do
-                                op' <- L.mul left' right'
-                                pure(Some(op'))
-                            BinaryDiv -> do
-                                op' <- L.sdiv left' right'
-                                pure(Some(op'))
+    left <- codegenNode l
+    right <- codegenNode r
+    case left of
+        None -> error "unexpected node in binary expression" -- todo: better error
+        Some (left') -> do
+            case right of
+                None -> error "unexpected node in binary expression" -- todo: better error
+                Some (right') -> do
+                    case op of
+                        BinaryAdd -> do
+                            op' <- if (isPointerType $ ty l) then L.gep left' [right']
+                            else if (isPointerType $ ty r) then L.gep right' [left']
+                            else L.add left' right'
+                            pure(Some(op'))
+                        BinaryAddAssign -> do
+                            op' <- if (isPointerType $ ty l) then L.gep left' [right']
+                            else L.add left' right'
+                            loc <- codegenNodeLVal l
+                            _ <- L.store loc 0 op'
+                            pure(None)
+                        BinarySubAssign -> do
+                            op' <- L.sub left' right'
+                            loc <- codegenNodeLVal l
+                            _ <- L.store loc 0 op'
+                            pure(None)
+                        BinarySub -> do
+                            op' <- L.sub left' right'
+                            pure(Some(op'))
+                        BinaryMul -> do
+                            op' <- L.mul left' right'
+                            pure(Some(op'))
+                        BinaryDiv -> do
+                            op' <- L.sdiv left' right'
+                            pure(Some(op'))
 
-                            BinaryEqual -> do
-                                op' <- L.icmp L.EQ left' right'
-                                pure(Some(op'))
-                            BinaryNotEqual -> do
-                                op' <- L.icmp L.NE left' right'
-                                pure(Some(op'))
-                            BinaryLessThan -> do
-                                op' <- L.icmp L.SLT left' right'
-                                pure(Some(op'))
-                            BinaryGreaterThan -> do
-                                op' <- L.icmp L.SGT left' right'
-                                pure(Some(op'))
-                            BinaryLessEqual -> do
-                                op' <- L.icmp L.SLE left' right'
-                                pure(Some(op'))
-                            BinaryGreaterEqual -> do
-                                op' <- L.icmp L.SGE left' right'
-                                pure(Some(op'))
-
-                            BinaryIndex -> do
-                                gep <- L.gep left' [right']
-                                load <- L.load gep 0
-                                pure(Some(load))
+                        BinaryEqual -> do
+                            op' <- L.icmp L.EQ left' right'
+                            pure(Some(op'))
+                        BinaryNotEqual -> do
+                            op' <- L.icmp L.NE left' right'
+                            pure(Some(op'))
+                        BinaryLessThan -> do
+                            op' <- L.icmp L.SLT left' right'
+                            pure(Some(op'))
+                        BinaryGreaterThan -> do
+                            op' <- L.icmp L.SGT left' right'
+                            pure(Some(op'))
+                        BinaryLessEqual -> do
+                            op' <- L.icmp L.SLE left' right'
+                            pure(Some(op'))
+                        BinaryGreaterEqual -> do
+                            op' <- L.icmp L.SGE left' right'
+                            pure(Some(op'))
 
 codegenNode (ASTNode (ASTCallExpression c params) ty) = do
     case c of
