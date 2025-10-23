@@ -3,6 +3,8 @@ module Typechecker where
 import Types
 import AST
 
+import Data.List
+
 typecheckFile :: [ASTGlobal] -> [ASTGlobal]
 typecheckFile decls = do
     [typecheckGlob decl | decl <- decls]
@@ -207,6 +209,20 @@ typecheckNode (ASTNode (ASTCallExpression callee params) fnType) = do
 typecheckNode (ASTNode (ASTSizeofExpression e) _) = do
     let e' = typecheckNode e
     ASTNode (ASTSizeofExpression e') IntType
+
+typecheckNode (ASTNode (ASTMemberAccess struct id isPointer) _) = do
+    let struct' = typecheckNode struct
+    let typ = (ty struct')
+    case typ of
+        (StructType _ ps) -> do
+            let m = find (matches id) ps
+            case m of
+                Nothing -> error $ "could not find member '" ++ id ++ "'"
+                Just (_, ty) -> ASTNode (ASTMemberAccess struct' id isPointer) ty
+        _ -> error $ "operator '.' is not defined for type " ++ prettyPrint typ
+
+    where
+        matches id (id', _) = id == id'
 
 typecheckNode (ASTNode (ASTSwitchStatement val cases) ty') = do
     let val' = typecheckNode val

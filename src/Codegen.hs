@@ -221,6 +221,20 @@ codegenNodeLVal (ASTNode (ASTBinaryExpression l BinaryIndex r) _) = do
             load <- L.load gep 0
             pure gep
 
+codegenNodeLVal (ASTNode (ASTMemberAccess struct id isPointer) _) = do
+    struc <- codegenNodeLVal struct
+    let structType = ty struct
+    case structType of
+        (StructType _ ps) -> do
+            let idx = Data.List.findIndex (matches id) ps
+            case idx of
+                Just idx' -> do
+                    gep <- L.gep struc [(L.int32 $ fromIntegral idx'), (L.int32 $ fromIntegral 0)]
+                    pure gep
+
+    where
+        matches id (id', _)= id == id'
+
 codegenNodeLVal x = error $ "non-lvalue: " ++ show x
 
 codegenNodeConstant :: ASTNode -> LLVM C.Constant
@@ -564,6 +578,11 @@ codegenNode (ASTNode (ASTSizeofExpression e) _) = pure $ Some(L.int32 $ fromInte
 codegenNode (ASTNode ASTNullptr ty) = do
     cast <- L.inttoptr (L.int64 0) (typeToLLVM ty)
     pure (Some(cast))
+
+codegenNode (ASTNode (ASTMemberAccess struct id isPointer) ty') = do
+    z <- codegenNodeLVal $ ASTNode (ASTMemberAccess struct id isPointer) ty'
+    load <- L.load z 0
+    pure (Some(load))
 
 codegenNode (ASTNode (ASTNothing) _) = pure(None)
 

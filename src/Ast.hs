@@ -54,6 +54,7 @@ data ASTNodeClass = ASTNothing
              | ASTCastExpression ASTNode Type
              | ASTSizeofExpression ASTNode
              | ASTSizeofType Type
+             | ASTMemberAccess ASTNode String Bool -- isPointer
              | ASTNullptr
              deriving (Eq, Show)
 

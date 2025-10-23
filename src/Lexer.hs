@@ -52,6 +52,7 @@ data Token = None
     | TokenPlusEqual
     | TokenMinusEqual
     | TokenEllipsis
+    | TokenDot
     deriving(Eq, Show)
 
 isType :: Token -> Bool
@@ -117,6 +118,7 @@ tokenize ('*':rest) = TokenStar : tokenize rest
 tokenize ('/':rest) = TokenSlash : tokenize rest
 tokenize ('&':rest) = TokenAmpersand : tokenize rest
 tokenize ('!':rest) = TokenBang : tokenize rest
+tokenize ('.':rest) = TokenDot : tokenize rest
 -- Keywords will be transformed afterwards
 tokenize (c:rest) | isAlpha c = TokenIdentifier(c:takeWhile isAlphaNum rest) : tokenize (dropWhile isAlphaNum rest)
                   | isDigit c = TokenIntegerLiteral(c:takeWhile isDigit rest) : tokenize (dropWhile isDigit rest)
