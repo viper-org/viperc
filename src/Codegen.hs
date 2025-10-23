@@ -278,16 +278,23 @@ codegenNode (ASTNode (ASTSwitchStatement value cases) _) = mdo
     val <- codegenNode value
     modify $ \env -> env { breakTo = mergeBB }
     L.br firstCond
-    (firstCond, firstCase) <- emitCases cases mergeBB val
+    (firstCond, firstCase) <- emitCases cases mergeBB mergeBB val
     modify $ \env -> env { breakTo = bTo }
     mergeBB <- L.named L.block "merge"
     pure(None)
 
     where
-        emitCases [] m val = do
-            pure (m, m)
-        emitCases ((SwitchCase (Valued cond) body):xs) m val = mdo
-            (nextCond, nextCase) <- emitCases xs m val
+        emitCases [] m m' val = do
+            pure (m, m')
+        emitCases ((SwitchCase Default body):xs) m m' val = mdo
+            (nextCond, nextCase) <- emitCases xs caseBB m' val -- override the merge block with the default case
+            caseBB <- L.named L.block "default"
+            mapM_ codegenNode body
+            codegenTerm $ L.br nextCase
+            pure (nextCond, caseBB)
+
+        emitCases ((SwitchCase (Valued cond) body):xs) m m' val = mdo
+            (nextCond, nextCase) <- emitCases xs m m' val
             condBB <- L.named L.block "caseCond"
             c <- codegenNode cond
             cmp <- L.icmp L.EQ (force val) (force c)

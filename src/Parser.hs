@@ -538,6 +538,7 @@ parseSwitchStatement = do
                 Just TokenRightBrace -> do
                     pure []
                 Just TokenCaseKeyword -> pure []
+                Just TokenDefaultKeyword -> pure []
                 _ -> do
                     curr <- parseExpr defaultPrecedence
                     _ <- expectToken TokenSemicolon
