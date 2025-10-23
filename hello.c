@@ -11,5 +11,5 @@ int main(int argc, char* argv[])
     q.a = 123;
     p->a = 55;
     printf("%d", q.a);
-    return 0;
+    return sizeof(q.a);
 }

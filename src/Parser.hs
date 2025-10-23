@@ -108,6 +108,12 @@ expectToken z = do
 insertToken :: Token -> Parser () -- for compound statements to insert a semicolon
 insertToken tok = Parser $ \s -> Right ((), s {tokens = (tok : tokens s)})
 
+tryParseType :: Parser (Maybe Type)
+tryParseType = Parser $ \s ->
+    case runParser parseType s of
+        Left _ -> Right (Nothing, s)
+        Right (ty, r) -> Right(Just ty, r)
+
 parseType :: Parser (Type)
 parseType = do
     tok <- currentTok
@@ -148,6 +154,8 @@ parseType = do
                 "long"  -> parseMore(LongType)
                 "void"  -> parseMore(VoidType)
                 "bool"  -> parseMore(BoolType)
+
+        _ -> Parser $ \s -> Left $ "expected a type"
             
         where
             parseMore type' = do
@@ -363,7 +371,8 @@ parseStructDeclaration name = do
             pure $ ASTStruct (StructDef name [])
         
         _ -> do
-            ASTNode (ASTVariableDeclaration fieldType fieldName x) _ <- parseVariableDeclaration
+            ty <- parseType
+            ASTNode (ASTVariableDeclaration fieldType fieldName x) _ <- parseVariableDeclaration ty
             _ <- expectToken TokenSemicolon
             case x of
                 (ASTNode ASTNothing _) -> do
@@ -383,7 +392,8 @@ parseStructDeclaration name = do
                     pure []
                 
                 _ -> do
-                    ASTNode (ASTVariableDeclaration fieldType fieldName x) _ <- parseVariableDeclaration
+                    ty <- parseType
+                    ASTNode (ASTVariableDeclaration fieldType fieldName x) _ <- parseVariableDeclaration ty
                     _ <- expectToken TokenSemicolon
                     case x of
                         (ASTNode ASTNothing _) -> do
@@ -516,60 +526,62 @@ parseExpr prec = do
 
 parsePrimary :: Parser ASTNode
 parsePrimary = do
-    tok <- currentTok
-    case tok of
-        Just (TokenIntegerLiteral s) -> do
-            _ <- consumeTok
-            pure $ ASTNode (ASTIntegerLiteral (read s :: Int)) IntType
+    tryType <- tryParseType
+    case tryType of
+        (Just ty) -> parseVariableDeclaration ty
 
-        Just (TokenCharLiteral c) -> do
-            _ <- consumeTok
-            pure $ ASTNode (ASTIntegerLiteral (ord c)) CharType
+        Nothing -> do
+            tok <- currentTok
+            case tok of
+                Just (TokenIntegerLiteral s) -> do
+                    _ <- consumeTok
+                    pure $ ASTNode (ASTIntegerLiteral (read s :: Int)) IntType
 
-        Just (TokenIdentifier s) -> do
-            _ <- consumeTok
-            ty <- getSymbol s
-            pure $ ASTNode (ASTVariableExpression s) ty
+                Just (TokenCharLiteral c) -> do
+                    _ <- consumeTok
+                    pure $ ASTNode (ASTIntegerLiteral (ord c)) CharType
 
-        Just (TokenStringLiteral s) -> do
-            _ <- consumeTok
-            pure $ ASTNode (ASTStringLiteral s) (PointerType CharType)
+                Just (TokenIdentifier s) -> do
+                    _ <- consumeTok
+                    ty <- getSymbol s
+                    pure $ ASTNode (ASTVariableExpression s) ty
 
-        Just TokenLeftParen -> do
-            _ <- consumeTok
-            e <- parseExpr defaultPrecedence
-            _ <- expectToken TokenRightParen
-            pure e
+                Just (TokenStringLiteral s) -> do
+                    _ <- consumeTok
+                    pure $ ASTNode (ASTStringLiteral s) (PointerType CharType)
 
-        Just TokenSizeofKeyword -> do
-            _ <- consumeTok
-            parseSizeofExpression
+                Just TokenLeftParen -> do
+                    _ <- consumeTok
+                    e <- parseExpr defaultPrecedence
+                    _ <- expectToken TokenRightParen
+                    pure e
 
-        Just TokenNullptr -> do
-            _ <- consumeTok
-            pure $ ASTNode ASTNullptr (PointerType VoidType)
+                Just TokenSizeofKeyword -> do
+                    _ <- consumeTok
+                    parseSizeofExpression
 
-        Just TokenReturnKeyword -> parseReturnStatement
-        Just (TokenTypeKeyword _) -> parseVariableDeclaration
-        Just TokenEnumKeyword -> parseVariableDeclaration
-        Just TokenStructKeyword -> parseVariableDeclaration
-        Just TokenIfKeyword -> parseIfStatement
-        Just TokenWhileKeyword -> parseWhileStatement
-        Just TokenForKeyword -> parseForStatement
-        Just TokenSwitchKeyword -> parseSwitchStatement
-        Just TokenLeftBrace -> parseCompoundStatement
+                Just TokenNullptr -> do
+                    _ <- consumeTok
+                    pure $ ASTNode ASTNullptr (PointerType VoidType)
 
-        Just TokenBreakKeyword -> do
-            _ <- consumeTok
-            pure $ ASTNode ASTBreakStatement VoidType
+                Just TokenReturnKeyword -> parseReturnStatement
+                Just TokenIfKeyword -> parseIfStatement
+                Just TokenWhileKeyword -> parseWhileStatement
+                Just TokenForKeyword -> parseForStatement
+                Just TokenSwitchKeyword -> parseSwitchStatement
+                Just TokenLeftBrace -> parseCompoundStatement
 
-        Just TokenContinueKeyword -> do
-            _ <- consumeTok
-            pure $ ASTNode ASTContinueStatement VoidType
+                Just TokenBreakKeyword -> do
+                    _ <- consumeTok
+                    pure $ ASTNode ASTBreakStatement VoidType
 
-        Just TokenSemicolon -> pure $ ASTNode ASTNothing VoidType
+                Just TokenContinueKeyword -> do
+                    _ <- consumeTok
+                    pure $ ASTNode ASTContinueStatement VoidType
 
-        _ -> Parser $ \s -> Left $ "Expected primary expression"
+                Just TokenSemicolon -> pure $ ASTNode ASTNothing VoidType
+
+                _ -> Parser $ \s -> Left $ "Expected primary expression"
 
 -- ASTCallExpression stores the full functiontype for typechecking which then transforms it
 parseCallExpression :: Callee -> Parser ASTNode
@@ -616,9 +628,8 @@ parseReturnStatement = do
             value <- parseExpr defaultPrecedence
             pure $ ASTNode (ASTReturnStatement value) retType
 
-parseVariableDeclaration :: Parser ASTNode
-parseVariableDeclaration = do
-    type' <- parseType
+parseVariableDeclaration :: Type -> Parser ASTNode
+parseVariableDeclaration type' = do
     TokenIdentifier name <- satisfyToken isIdentifier
     parseRest name type'
 
@@ -799,9 +810,15 @@ parseSizeofExpression = do
     case tok of
         Just TokenLeftParen -> do
             _ <- consumeTok
-            ty <- parseType
-            _ <- expectToken TokenRightParen
-            pure $ ASTNode (ASTSizeofType ty) IntType
+            ty <- tryParseType
+            case ty of
+                (Just ty') -> do
+                    _ <- expectToken TokenRightParen
+                    pure $ ASTNode (ASTSizeofType ty') IntType
+                Nothing -> do
+                    e <- parseExpr defaultPrecedence
+                    _ <- expectToken TokenRightParen
+                    pure $ ASTNode (ASTSizeofExpression e) IntType
         
         _ -> do
             e <- parseExpr defaultPrecedence
