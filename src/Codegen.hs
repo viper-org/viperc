@@ -95,6 +95,29 @@ getConst s = do
 mTypeToLLVM :: MonadState Scope m => Types.Type -> m AST.Type
 mTypeToLLVM ty = pure $ typeToLLVM ty
 
+paramNameToName :: ParameterName -> Name
+paramNameToName (ParameterName z) = Name z
+
+functionVarArgs
+  :: (MonadModuleBuilder m, MonadFix m)
+  => Name
+  -> [(AST.Type, ParameterName)]
+  -> AST.Type
+  -> ([Operand] -> IRBuilderT m ())
+  -> m Operand
+functionVarArgs nm args retType body = mdo
+    let args' = [Parameter ty (paramNameToName name) [] | (ty, name) <- args]
+    let fn = GlobalDefinition functionDefaults
+            { name        = nm
+            , parameters  = (args', True)
+            , returnType  = retType
+            , basicBlocks = blocks
+            }
+    emitDefn fn
+    ((), blocks) <- runIRBuilderT emptyIRBuilder (body [])
+    pure $ ConstantOperand (C.GlobalReference (AST.ptr (AST.FunctionType retType (fst <$> args) True)) nm)
+
+
 codegenFile :: [ASTGlobal] -> AST.Module
 codegenFile decls =
     flip evalState (Scope{locals = Map.empty, consts = Map.empty, uniqueID = 0, breakTo = "", continueTo = ""}) $
@@ -121,7 +144,32 @@ codegenEnumDef (EnumDef name base vals) = do
         addValue (name, val) = addConst name (L.int32 $ fromIntegral val)
 
 codegenFuncDef :: FunctionDef -> LLVM ()
-codegenFuncDef (FunctionDef typ name args body isProto) = mdo
+codegenFuncDef (FunctionDef typ name args body isProto) | hasVarArgs args = mdo
+    addLocal name funct
+    scope <- gets locals
+    let args' = Data.List.filter (not . isVariArg) args
+    let parms = [generateParm type' name' | (type', name') <- args']
+    let returnType = getReturnType typ
+    funct <- case isProto of
+        True -> functionVarArgs (AST.mkName $ cs name) parms (typeToLLVM returnType) emitProto
+        False -> functionVarArgs (AST.mkName $ cs name) parms (typeToLLVM returnType) emitBody
+    modify $ \env -> env { locals = scope }
+    pure()
+    where
+        generateParm type' name' = ((typeToLLVM type'), ParameterName (SBS.toShort (BS.pack name')))
+        emitBody paramOps = do
+            z <- L.named L.block "entry"
+            mapM_ initParam (zip args paramOps)
+            mapM_ codegenNode body
+
+            where
+                initParam ((type', name'), parmOp) = do
+                    alloca <- L.alloca (typeToLLVM type') Nothing 0
+                    L.store alloca 0 parmOp
+                    addLocal name' alloca
+        emitProto _ = pure()
+
+codegenFuncDef (FunctionDef typ name args body isProto) | not $ hasVarArgs args = mdo
     addLocal name funct
     scope <- gets locals
     let parms = [generateParm type' name' | (type', name') <- args]

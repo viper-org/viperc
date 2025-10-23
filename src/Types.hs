@@ -11,7 +11,7 @@ type Length = Int
 
 data Type = VoidType | CharType | ShortType | IntType | LongType | BoolType
           | PointerType Type | ArrayType Type Length
-          | FunctionType ReturnType [ParameterType]
+          | FunctionType ReturnType [ParameterType] | VarArgType
           | AliasType String Type
     deriving (Show)
 
@@ -39,6 +39,11 @@ castLevel x (PointerType VoidType) | isPointerType x = Implicit
 castLevel VoidType _ = Disallowed
 castLevel x y = Disallowed
 
+isVarArgType :: Type -> Bool
+isVarArgType VarArgType = True
+isVarArgType _ = False
+
+
 typeToLLVM :: Type -> AST.Type
 typeToLLVM VoidType  = AST.void
 typeToLLVM CharType  = AST.i8
@@ -48,7 +53,7 @@ typeToLLVM LongType  = AST.i64
 typeToLLVM BoolType  = AST.i1
 typeToLLVM (PointerType p) = AST.ptr $ typeToLLVM p
 typeToLLVM (ArrayType p len) = AST.ArrayType (fromIntegral len) (typeToLLVM p)
-typeToLLVM (FunctionType r ps) = AST.FunctionType (typeToLLVM r) [typeToLLVM p | p <- ps] False
+typeToLLVM (FunctionType r ps) = AST.FunctionType (typeToLLVM r) [typeToLLVM p | p <- ps] (or [isVarArgType p | p <- ps])
 typeToLLVM (AliasType _ z) = typeToLLVM z
 
 typeSize :: Type -> Int
@@ -61,6 +66,7 @@ typeSize BoolType = 1
 typeSize (PointerType _) = 64
 typeSize (ArrayType e n) = (typeSize e) * n
 typeSize (FunctionType _ _) = 0
+typeSize VarArgType = 0
 typeSize (AliasType _ z) = typeSize z
 
 typeBytes :: Type -> Int
@@ -87,6 +93,7 @@ isPointerType _ = False
 isObjectType :: Type -> Bool
 isObjectType VoidType = False
 isObjectType (FunctionType _ _) = False
+isObjectType VarArgType = False
 isObjectType (AliasType _ z) = isObjectType z
 isObjectType _ = True
 
@@ -115,4 +122,5 @@ prettyPrint VoidType = "void"
 prettyPrint BoolType = "bool"
 prettyPrint (PointerType p) = (prettyPrint p) ++ "*"
 prettyPrint (FunctionType r ps) = (prettyPrint r) ++ (foldl (++) "(" [prettyPrint p | p <- ps]) ++ ")"
+prettyPrint VarArgType = "..."
 prettyPrint (AliasType n _) = n

@@ -74,8 +74,14 @@ data EnumDef = EnumDef {
 
 data FunctionDef = FunctionDef {
     fnType :: Type,
-    name :: String,
+    fnName :: String,
     args :: [(Type, String)],
     body :: [ASTNode],
     prototype :: Bool
 } deriving (Eq, Show)
+
+isVariArg :: (Type, String) -> Bool
+isVariArg (z, _) = isVarArgType z
+
+hasVarArgs :: [(Type, String)] -> Bool
+hasVarArgs args = or [isVariArg x | x <- args]

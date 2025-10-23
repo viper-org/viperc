@@ -175,14 +175,21 @@ parseParams = do
                         _ <- consumeTok
                         parm <- parseParam
                         rest <- parseMore
+                        -- todo: check if there are args after ... and error if so
                         pure (parm : rest)
                     _ -> pure []
 
 parseParam :: Parser (Type, String)
 parseParam = do
-    type' <- parseType
-    (TokenIdentifier  parmName) <- satisfyToken isIdentifier
-    pure (type', parmName)
+    tok <- currentTok
+    case tok of
+        Just TokenEllipsis -> do
+            _ <- consumeTok
+            pure (VarArgType, "")
+        _ -> do
+            type' <- parseType
+            (TokenIdentifier  parmName) <- satisfyToken isIdentifier
+            pure (type', parmName)
 
 parseFunction :: Type -> String -> Parser ASTGlobal
 parseFunction type' name = do

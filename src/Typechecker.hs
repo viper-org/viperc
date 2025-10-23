@@ -186,8 +186,15 @@ typecheckNode (ASTNode (ASTCallExpression callee params) fnType) = do
     let params' = [typecheckNode p | p <- params]
     let argTypes = getArgumentTypes fnType
 
-    let p = map checkOne (zip params' argTypes)
-    ASTNode (ASTCallExpression callee' p) (getReturnType fnType)
+    -- Only check the parameters before the vararg (if it exists)
+    let argTypes' = takeWhile (not . isVarArgType) argTypes
+
+    if (length params') < (length argTypes') then
+        error $ "function call requires " ++ show (length argTypes') ++ " parameters, has " ++ show (length params')
+    else do
+        let p = map checkOne (zip params' argTypes')
+        let rest = drop (length argTypes') params'
+        ASTNode (ASTCallExpression callee' (p++rest)) (getReturnType fnType)
 
     where
         checkOne (p, argT) = do

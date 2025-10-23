@@ -49,6 +49,7 @@ data Token = None
     | TokenGreaterEqual
     | TokenPlusEqual
     | TokenMinusEqual
+    | TokenEllipsis
     deriving(Eq, Show)
 
 isType :: Token -> Bool
@@ -83,6 +84,7 @@ assignKeywords (x:xs) = x : assignKeywords xs
 
 tokenize :: String -> [Token]
 tokenize [] = []
+tokenize('.':'.':'.':rest) = TokenEllipsis : tokenize rest
 tokenize('=':'=':rest) = TokenDoubleEqual : tokenize rest
 tokenize('!':'=':rest) = TokenBangEqual : tokenize rest
 tokenize('+':'=':rest) = TokenPlusEqual : tokenize rest
