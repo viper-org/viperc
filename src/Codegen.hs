@@ -39,6 +39,7 @@ import LLVM.IRBuilder.Constant as L;
 -- todo: proper scope-level local variables
 data Scope = Scope {
     locals :: Map String AST.Operand,
+    consts :: Map String AST.Operand,
     uniqueID :: Int,
     breakTo :: AST.Name,
     continueTo :: AST.Name
@@ -74,25 +75,36 @@ getUniqName = do
 addLocal :: MonadState Scope m => String -> AST.Operand -> m ()
 addLocal name value = modify $ \env -> env { locals = Map.insert name value (locals env) }
 
-getLocal :: String -> Builder AST.Operand
+addConst :: MonadState Scope m => String -> AST.Operand -> m ()
+addConst name value = modify $ \env -> env { consts = Map.insert name value (consts env) }
+
+getLocal :: String -> Builder CodegenOperand
 getLocal s = do
     vars <- gets locals
     case Map.lookup s vars of
+        Just var -> pure (Some var)
+        Nothing -> pure None
+
+getConst :: String -> Builder Operand
+getConst s = do
+    vars <- gets consts
+    case Map.lookup s vars of
         Just var -> pure var
-        Nothing -> error ("'" ++ s ++ "' does not exist in this scope") -- todo: proper error
+        Nothing -> error $ "variable '" ++ show s ++ "' does not exist in this scope"
 
 mTypeToLLVM :: MonadState Scope m => Types.Type -> m AST.Type
 mTypeToLLVM ty = pure $ typeToLLVM ty
 
 codegenFile :: [ASTGlobal] -> AST.Module
 codegenFile decls =
-    flip evalState (Scope{locals = Map.empty, uniqueID = 0, breakTo = "", continueTo = ""}) $
+    flip evalState (Scope{locals = Map.empty, consts = Map.empty, uniqueID = 0, breakTo = "", continueTo = ""}) $
         L.buildModuleT "hello.c" $ do
             mapM_ codegenDecl decls
 
 codegenDecl :: ASTGlobal -> LLVM()
 codegenDecl (ASTFunction (FunctionDef a b c d e)) = codegenFuncDef (FunctionDef a b c d e)
 codegenDecl (ASTGlobalVar a b c) = codegenGlobalVar (ASTGlobalVar a b c)
+codegenDecl (ASTEnum (EnumDef a b c)) = codegenEnumDef (EnumDef a b c)
 
 codegenGlobalVar :: ASTGlobal -> LLVM ()
 codegenGlobalVar (ASTGlobalVar type' name init) = do
@@ -100,6 +112,13 @@ codegenGlobalVar (ASTGlobalVar type' name init) = do
     glob <- L.global (Name (SBS.toShort (BS.pack name))) (typeToLLVM type') c
     addLocal name glob
     pure ()
+
+codegenEnumDef :: EnumDef -> LLVM ()
+codegenEnumDef (EnumDef name base vals) = do
+    mapM_ addValue vals
+
+    where
+        addValue (name, val) = addConst name (L.int32 $ fromIntegral val)
 
 codegenFuncDef :: FunctionDef -> LLVM ()
 codegenFuncDef (FunctionDef typ name args body isProto) = mdo
@@ -130,7 +149,7 @@ codegenFuncDef (FunctionDef typ name args body isProto) = mdo
 codegenNodeLVal :: ASTNode -> Builder AST.Operand
 codegenNodeLVal (ASTNode (ASTVariableExpression ident) ty') = do
     var <- getLocal ident
-    pure(var)
+    pure(force var)
 
 codegenNodeLVal (ASTNode (ASTUnaryExpression UnaryIndirect op) _) = do
     z <- codegenNode op
@@ -152,6 +171,8 @@ codegenNodeLVal (ASTNode (ASTBinaryExpression l BinaryIndex r) _) = do
             gep <- L.gep left [force right, (L.int32 0)]
             load <- L.load gep 0
             pure gep
+
+codegenNodeLVal x = error $ "non-lvalue: " ++ show x
 
 codegenNodeConstant :: ASTNode -> LLVM C.Constant
 codegenNodeConstant (ASTNode (ASTIntegerLiteral i) _) = pure $ C.Int (fromIntegral i) (fromIntegral i)
@@ -335,8 +356,13 @@ codegenNode (ASTNode (ASTStringLiteral value) ty') = do
 
 codegenNode (ASTNode (ASTVariableExpression name) ty') = do
     var <- getLocal name
-    l <- L.load var 0
-    pure(Some(l))
+    case var of
+        None -> do
+            c <- Codegen.getConst name
+            pure (Some(c))
+        Some (v) -> do
+            l <- L.load v 0
+            pure(Some(l))
 
 codegenNode (ASTNode (ASTBinaryExpression l BinaryAssign r) ty') = do
     left <- codegenNodeLVal l
@@ -423,7 +449,7 @@ codegenNode (ASTNode (ASTCallExpression c params) ty) = do
         (ASTNode (ASTVariableExpression ident) ty') -> do
             callee <- getLocal ident
             params' <- mapM makeParam params
-            call' <- L.call callee params'
+            call' <- L.call (force callee) params'
             pure(Some(call'))
         _ -> error "unimplemented call expression"
 

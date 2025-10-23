@@ -20,7 +20,7 @@ main = do
     contents <- Prelude.readFile "hello.c"
     let parserOutput = runParser parseFile (ParserState (assignKeywords (tokenize contents)) VoidType Map.empty)
     case parserOutput of
-        Left err -> print err
+        Left err -> error err
         Right (ast, state) -> do
             let typechecked = typecheckFile ast
             let llvm = unpack (BS.concat (BL.toChunks(TLE.encodeUtf8 (ppllvm (codegenFile typechecked)))))

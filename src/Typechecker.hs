@@ -10,6 +10,7 @@ typecheckFile decls = do
 typecheckGlob :: ASTGlobal -> ASTGlobal
 typecheckGlob (ASTFunction (FunctionDef a b c d e)) = typecheckFunc (FunctionDef a b c d e)
 typecheckGlob (ASTGlobalVar type' name initVal) = typecheckGlobalVar (ASTGlobalVar type' name initVal)
+typecheckGlob (ASTEnum (EnumDef a b c)) = ASTEnum (EnumDef a b c)
 
 typecheckGlobalVar :: ASTGlobal -> ASTGlobal
 typecheckGlobalVar (ASTGlobalVar type' name (ASTNode ASTNothing _)) = case type' of
@@ -123,6 +124,16 @@ typecheckNode (ASTNode (ASTBinaryExpression l BinaryIndex r) ty') = do
     where
         getElementType (PointerType p) = p
         getElementType (ArrayType e l) = e
+
+typecheckNode (ASTNode (ASTBinaryExpression l BinaryAssign r) ty') = do
+    let l' = typecheckNode l
+    let r' = typecheckNode r
+    let lType = ty l'
+    let rType = ty r'
+    if lType == rType then ASTNode (ASTBinaryExpression l' BinaryAssign r') ty'
+    else if (castLevel lType rType) == Implicit then
+        ASTNode (ASTBinaryExpression l' BinaryAssign (ASTNode (ASTCastExpression r' lType) lType)) ty'
+    else error $ "cannot assign " ++ prettyPrint rType ++ " to value of type " ++ show lType
 
 typecheckNode (ASTNode (ASTBinaryExpression l op r) ty') = do
     let l' = typecheckNode l

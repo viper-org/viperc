@@ -108,6 +108,11 @@ parseType = do
     tok <- currentTok
     case tok of
         Nothing -> Parser $ \s -> Left $ "expected a type"
+        Just TokenEnumKeyword -> do
+            _ <- consumeTok
+            (TokenIdentifier ident) <- satisfyToken isIdentifier
+            ty <- getSymbol ident
+            parseMore ty
         Just (TokenTypeKeyword name) -> do
             _ <- consumeTok
             case name of
@@ -118,24 +123,24 @@ parseType = do
                 "void"  -> parseMore(VoidType)
                 "bool"  -> parseMore(BoolType)
             
-            where
-                parseMore type' = do
-                    tok <- currentTok
-                    case tok of
-                        Just TokenStar -> do
-                            _ <- consumeTok
-                            parseMore $ PointerType type'
-                        _ -> pure (type')
+        where
+            parseMore type' = do
+                tok <- currentTok
+                case tok of
+                    Just TokenStar -> do
+                        _ <- consumeTok
+                        parseMore $ PointerType type'
+                    _ -> pure (type')
 
 parseFile :: Parser [ASTGlobal]
 parseFile = do
     tok <- currentTok
     case tok of
-        Just (TokenTypeKeyword _) -> do
+        Nothing -> pure []
+        _ -> do
             curr <- parseGlobal
             rest <- parseFile
             pure (curr : rest)
-        _ -> pure []
 
 parseGlobal :: Parser ASTGlobal
 parseGlobal = do
@@ -149,6 +154,7 @@ parseGlobal = do
                 Just TokenLeftParen -> parseFunction type' name
                 Just TokenEqual -> parseGlobalVar type' name
                 z -> Parser $ \s -> Left $ "expected declaration. found " ++ show z
+        Just TokenEnumKeyword -> parseEnumDeclaration
         z -> Parser $ \s -> Left $ "expected declaration. found " ++ show z
 
 parseParams :: Parser [(Type, String)]
@@ -229,6 +235,70 @@ parseGlobalVar type' name = do
         Just TokenSemicolon -> do
             _ <- consumeTok
             pure $ ASTGlobalVar type' name (ASTNode ASTNothing VoidType)
+
+parseEnumDeclaration :: Parser ASTGlobal
+parseEnumDeclaration = do
+    _ <- consumeTok -- enum
+    (TokenIdentifier name) <- satisfyToken isIdentifier
+    tok' <- currentTok
+    baseType <- case tok' of
+        Just TokenColon -> do
+            _ <- consumeTok
+            parseType
+        _ -> pure IntType
+
+    let enumType = AliasType ("enum " ++ name) baseType
+
+    addSymbol name enumType
+    
+    _ <- expectToken TokenLeftBrace
+    tok <- currentTok
+    case tok of
+        Just TokenRightBrace -> do
+            _ <- consumeTok
+            _ <- expectToken TokenSemicolon
+            pure $ ASTEnum (EnumDef name enumType [])
+        
+        Just (TokenIdentifier ident) -> do
+            _ <- consumeTok
+            tok <- currentTok
+            val <- if tok == Just TokenEqual then do
+                _ <- consumeTok
+                (TokenIntegerLiteral s) <- satisfyToken isIntegerLiteral
+                pure(read s :: Int)
+                else pure 0
+            let curr = (ident, val)
+            more <- parseMore val
+            mapM_ (addEnumSymbol enumType) (curr : more)
+            _ <- expectToken TokenRightBrace
+            _ <- expectToken TokenSemicolon
+            pure $ ASTEnum (EnumDef name enumType (curr : more))
+
+    where
+        parseMore prev = do
+            tok <- currentTok
+            case tok of
+                Just TokenRightBrace -> pure []
+                Just TokenComma -> do
+                    _ <- consumeTok
+                    z <- currentTok
+                    if z == Just TokenRightBrace then pure[]
+                    else do
+                        (TokenIdentifier ident) <- satisfyToken isIdentifier
+                        tok <- currentTok
+                        val <- if tok == Just TokenEqual then do
+                            _ <- consumeTok
+                            (TokenIntegerLiteral s) <- satisfyToken isIntegerLiteral
+                            pure(read s :: Int)
+                            else pure $ prev + 1
+                        let curr = (ident, val)
+                        more <- parseMore val
+                        pure (curr : more)
+
+        addEnumSymbol enumType (ident,_) = addSymbol ident enumType
+
+        isIntegerLiteral (TokenIntegerLiteral _) = True
+        isIntegerLiteral _ = False
 
 getBinaryOperatorPrecedence :: Token -> Parser Int
 getBinaryOperatorPrecedence TokenLeftParen = pure(90)
@@ -377,6 +447,7 @@ parsePrimary = do
 
         Just TokenReturnKeyword -> parseReturnStatement
         Just (TokenTypeKeyword _) -> parseVariableDeclaration
+        Just TokenEnumKeyword -> parseVariableDeclaration
         Just TokenIfKeyword -> parseIfStatement
         Just TokenWhileKeyword -> parseWhileStatement
         Just TokenForKeyword -> parseForStatement

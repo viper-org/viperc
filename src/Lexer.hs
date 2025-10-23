@@ -5,6 +5,7 @@ import Data.Char
 data Token = None
     | TokenError(Char)
     | TokenTypeKeyword String
+    | TokenEnumKeyword
     | TokenIdentifier String
     | TokenLeftParen
     | TokenRightParen
@@ -66,6 +67,7 @@ assignKeywords ((TokenIdentifier "int"):xs)      = TokenTypeKeyword ("int")   : 
 assignKeywords ((TokenIdentifier "long"):xs)     = TokenTypeKeyword ("long")  : assignKeywords xs
 assignKeywords ((TokenIdentifier "void"):xs)     = TokenTypeKeyword ("void")  : assignKeywords xs
 assignKeywords ((TokenIdentifier "bool"):xs)     = TokenTypeKeyword ("bool")  : assignKeywords xs
+assignKeywords ((TokenIdentifier "enum"):xs)     = TokenEnumKeyword           : assignKeywords xs
 assignKeywords ((TokenIdentifier "return"):xs)   = TokenReturnKeyword         : assignKeywords xs
 assignKeywords ((TokenIdentifier "if"):xs)       = TokenIfKeyword             : assignKeywords xs
 assignKeywords ((TokenIdentifier "else"):xs)     = TokenElseKeyword           : assignKeywords xs

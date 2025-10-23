@@ -1,11 +1,16 @@
 void puts(char* s);
 void putchar(char c);
 
+enum Test : long {
+    YYY,
+    XXX
+};
+
 int main(int argc, char** argv)
 {
-    int x[5];
-    x[argc] = 33;
+    enum Test x[5];
+    x[argc] = 22;
     puts("Hello, world!");
 
-    return sizeof(int);
+    return x[argc];
 }
