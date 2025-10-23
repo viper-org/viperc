@@ -10,7 +10,7 @@ type ParameterType = Type
 type Length = Int
 
 data Type = VoidType | CharType | ShortType | IntType | LongType | BoolType
-          | PointerType Type | ArrayType Type Length
+          | PointerType Type | ArrayType Type Length | StructType String [(String, Type)]
           | FunctionType ReturnType [ParameterType] | VarArgType
           | AliasType String Type
     deriving (Show)
@@ -24,6 +24,7 @@ instance Eq Type where
     (BoolType) == (BoolType) = True
     (PointerType p) == (PointerType q) = p == q
     (ArrayType l1 n1) == (ArrayType l2 n2) = l1 == l2 && n1 == n2
+    (StructType n1 _) == (StructType n2 _) = n1 == n2
     (FunctionType r ps) == (FunctionType s qs) = r == s && ps == qs
     (AliasType _ z) == (AliasType _ y) = z == y
     (AliasType _ z) == x = z == x
@@ -58,6 +59,7 @@ typeToLLVM BoolType  = AST.i1
 typeToLLVM (PointerType VoidType) = AST.ptr AST.i8
 typeToLLVM (PointerType p) = AST.ptr $ typeToLLVM p
 typeToLLVM (ArrayType p len) = AST.ArrayType (fromIntegral len) (typeToLLVM p)
+typeToLLVM (StructType n xs) = AST.StructureType False [typeToLLVM x | (_, x) <- xs]
 typeToLLVM (FunctionType r ps) = AST.FunctionType (typeToLLVM r) [typeToLLVM p | p <- ps] (or [isVarArgType p | p <- ps])
 typeToLLVM (AliasType _ z) = typeToLLVM z
 

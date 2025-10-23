@@ -18,11 +18,12 @@ import Data.Map as Map
 main :: IO()
 main = do
     contents <- Prelude.readFile "hello.c"
-    let parserOutput = runParser parseFile (ParserState (assignKeywords (tokenize contents)) VoidType Map.empty)
+    let parserOutput = runParser parseFile (ParserState (assignKeywords (tokenize contents)) VoidType [] Map.empty)
     case parserOutput of
         Left err -> error err
-        Right (ast, state) -> do
-            let typechecked = typecheckFile ast
+        Right (ast, (ParserState _ _ globals _)) -> do
+            let ast' = globals ++ ast
+            let typechecked = typecheckFile ast'
             let llvm = unpack (BS.concat (BL.toChunks(TLE.encodeUtf8 (ppllvm (codegenFile typechecked)))))
             Prelude.writeFile "hello.ll" (T.unpack (TE.decodeUtf8 (BS.pack llvm)))
             print ast

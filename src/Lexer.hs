@@ -6,6 +6,7 @@ data Token = None
     | TokenError(Char)
     | TokenTypeKeyword String
     | TokenEnumKeyword
+    | TokenStructKeyword
     | TokenIdentifier String
     | TokenLeftParen
     | TokenRightParen
@@ -82,6 +83,7 @@ assignKeywords ((TokenIdentifier "case"):xs)     = TokenCaseKeyword           : 
 assignKeywords ((TokenIdentifier "default"):xs)  = TokenDefaultKeyword        : assignKeywords xs
 assignKeywords ((TokenIdentifier "sizeof"):xs)   = TokenSizeofKeyword         : assignKeywords xs
 assignKeywords ((TokenIdentifier "nullptr"):xs)  = TokenNullptr               : assignKeywords xs
+assignKeywords ((TokenIdentifier "struct"):xs)   = TokenStructKeyword         : assignKeywords xs
 assignKeywords (x:xs) = x : assignKeywords xs
 
 tokenize :: String -> [Token]

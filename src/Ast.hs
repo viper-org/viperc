@@ -65,12 +65,18 @@ data ASTNode = ASTNode {
 data ASTGlobal = ASTFunction FunctionDef
                | ASTGlobalVar Type String InitialValue
                | ASTEnum EnumDef
+               | ASTStruct StructDef
     deriving (Eq, Show)
 
 data EnumDef = EnumDef {
     enumName :: String,
     enumBase :: Type,
     enumVals :: [(String, Int)]
+} deriving (Eq, Show)
+
+data StructDef = StructDef {
+    structName :: String,
+    fields :: [(String, Type)]
 } deriving (Eq, Show)
 
 data FunctionDef = FunctionDef {

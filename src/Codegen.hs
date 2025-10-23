@@ -128,6 +128,7 @@ codegenDecl :: ASTGlobal -> LLVM()
 codegenDecl (ASTFunction (FunctionDef a b c d e)) = codegenFuncDef (FunctionDef a b c d e)
 codegenDecl (ASTGlobalVar a b c) = codegenGlobalVar (ASTGlobalVar a b c)
 codegenDecl (ASTEnum (EnumDef a b c)) = codegenEnumDef (EnumDef a b c)
+codegenDecl (ASTStruct _) = pure()
 
 codegenGlobalVar :: ASTGlobal -> LLVM ()
 codegenGlobalVar (ASTGlobalVar type' name init) = do

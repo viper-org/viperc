@@ -11,6 +11,7 @@ typecheckGlob :: ASTGlobal -> ASTGlobal
 typecheckGlob (ASTFunction (FunctionDef a b c d e)) = typecheckFunc (FunctionDef a b c d e)
 typecheckGlob (ASTGlobalVar type' name initVal) = typecheckGlobalVar (ASTGlobalVar type' name initVal)
 typecheckGlob (ASTEnum (EnumDef a b c)) = ASTEnum (EnumDef a b c)
+typecheckGlob (ASTStruct z) = ASTStruct z
 
 typecheckGlobalVar :: ASTGlobal -> ASTGlobal
 typecheckGlobalVar (ASTGlobalVar type' name (ASTNode ASTNothing _)) = case type' of

@@ -12,6 +12,7 @@ defaultPrecedence = 1
 data ParserState = ParserState {
     tokens :: [Token],
     currentReturnType :: Type,
+    extraGlobals :: [ASTGlobal], -- enums and stuff
     symbols :: Map String Type -- maybe make this a proper symbol type later
 } deriving (Eq, Show)
 
@@ -66,6 +67,10 @@ addSymbol name type' = Parser $ \s ->
 addSymbolZipped :: (Type, String) -> Parser ()
 addSymbolZipped (type', name) = addSymbol name type'
 
+addExtraGlobal :: ASTGlobal -> Parser ()
+addExtraGlobal glob = Parser $ \s ->
+    Right((), s { extraGlobals = (extraGlobals s) ++ [glob] })
+
 setSymbols :: Map String Type -> Parser()
 setSymbols m = Parser $ \s ->
     Right((), s { symbols = m })
@@ -111,8 +116,29 @@ parseType = do
         Just TokenEnumKeyword -> do
             _ <- consumeTok
             (TokenIdentifier ident) <- satisfyToken isIdentifier
-            ty <- getSymbol ident
-            parseMore ty
+            tok <- currentTok
+            case tok of
+                Just TokenLeftBrace -> do
+                    parseEnumDeclaration ident
+                    ty <- getSymbol ident
+                    parseMore ty
+                _ -> do
+                    ty <- getSymbol ident
+                    parseMore ty
+
+        Just TokenStructKeyword -> do
+            _ <- consumeTok
+            (TokenIdentifier ident) <- satisfyToken isIdentifier
+            tok <- currentTok
+            case tok of
+                Just TokenLeftBrace -> do
+                    parseStructDeclaration ident
+                    ty <- getSymbol ident
+                    parseMore ty
+                _ -> do
+                    ty <- getSymbol ident
+                    parseMore ty
+
         Just (TokenTypeKeyword name) -> do
             _ <- consumeTok
             case name of
@@ -144,18 +170,19 @@ parseFile = do
 
 parseGlobal :: Parser ASTGlobal
 parseGlobal = do
+    ty <- parseType
     tok <- currentTok
     case tok of
-        Just (TokenTypeKeyword _) -> do
-            type' <- parseType
-            (TokenIdentifier name) <- satisfyToken isIdentifier
+        Just (TokenIdentifier name) -> do
+            _ <- consumeTok
             tok <- currentTok
             case tok of
-                Just TokenLeftParen -> parseFunction type' name
-                Just TokenEqual -> parseGlobalVar type' name
+                Just TokenLeftParen -> parseFunction ty name
+                Just TokenEqual -> parseGlobalVar ty name
                 z -> Parser $ \s -> Left $ "expected declaration. found " ++ show z
-        Just TokenEnumKeyword -> parseEnumDeclaration
-        z -> Parser $ \s -> Left $ "expected declaration. found " ++ show z
+        _ -> do
+            _ <- expectToken TokenSemicolon
+            parseGlobal
 
 parseParams :: Parser [(Type, String)]
 parseParams = do
@@ -262,10 +289,8 @@ parseGlobalVar type' name = do
             _ <- consumeTok
             pure $ ASTGlobalVar type' name (ASTNode ASTNothing VoidType)
 
-parseEnumDeclaration :: Parser ASTGlobal
-parseEnumDeclaration = do
-    _ <- consumeTok -- enum
-    (TokenIdentifier name) <- satisfyToken isIdentifier
+parseEnumDeclaration :: String -> Parser ASTGlobal
+parseEnumDeclaration name = do
     tok' <- currentTok
     baseType <- case tok' of
         Just TokenColon -> do
@@ -282,7 +307,6 @@ parseEnumDeclaration = do
     case tok of
         Just TokenRightBrace -> do
             _ <- consumeTok
-            _ <- expectToken TokenSemicolon
             pure $ ASTEnum (EnumDef name enumType [])
         
         Just (TokenIdentifier ident) -> do
@@ -297,8 +321,9 @@ parseEnumDeclaration = do
             more <- parseMore val
             mapM_ (addEnumSymbol enumType) (curr : more)
             _ <- expectToken TokenRightBrace
-            _ <- expectToken TokenSemicolon
-            pure $ ASTEnum (EnumDef name enumType (curr : more))
+            let g = ASTEnum (EnumDef name enumType (curr : more))
+            addExtraGlobal g
+            pure (g)
 
     where
         parseMore prev = do
@@ -325,6 +350,47 @@ parseEnumDeclaration = do
 
         isIntegerLiteral (TokenIntegerLiteral _) = True
         isIntegerLiteral _ = False
+
+parseStructDeclaration :: String -> Parser ASTGlobal
+parseStructDeclaration name = do
+    _ <- expectToken TokenLeftBrace
+    tok <- currentTok
+    case tok of
+        Just TokenRightBrace -> do
+            _ <- consumeTok
+            let structType = StructType name []
+            addSymbol name structType
+            pure $ ASTStruct (StructDef name [])
+        
+        _ -> do
+            ASTNode (ASTVariableDeclaration fieldType fieldName x) _ <- parseVariableDeclaration
+            _ <- expectToken TokenSemicolon
+            case x of
+                (ASTNode ASTNothing _) -> do
+                    let curr = (fieldName, fieldType)
+                    rest <- parseMore
+                    _ <- expectToken TokenRightBrace
+                    let structType = StructType name (curr : rest)
+                    addSymbol name structType
+                    pure $ ASTStruct (StructDef name (curr : rest))
+                _ -> Parser $ \s -> Left $ "unexpected initializer in struct field " ++ fieldName
+
+    where
+        parseMore = do
+            tok <- currentTok
+            case tok of
+                Just TokenRightBrace -> do
+                    pure []
+                
+                _ -> do
+                    ASTNode (ASTVariableDeclaration fieldType fieldName x) _ <- parseVariableDeclaration
+                    _ <- expectToken TokenSemicolon
+                    case x of
+                        (ASTNode ASTNothing _) -> do
+                            let curr = (fieldName, fieldType)
+                            rest <- parseMore
+                            pure (curr : rest)
+                        _ -> error $ "unexpected initializer in struct field " ++ fieldName
 
 getBinaryOperatorPrecedence :: Token -> Parser Int
 getBinaryOperatorPrecedence TokenLeftParen = pure(90)
