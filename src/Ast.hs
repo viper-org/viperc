@@ -54,6 +54,7 @@ data ASTNodeClass = ASTNothing
              | ASTCastExpression ASTNode Type
              | ASTSizeofExpression ASTNode
              | ASTSizeofType Type
+             | ASTNullptr
              deriving (Eq, Show)
 
 data ASTNode = ASTNode {

@@ -452,6 +452,10 @@ parsePrimary = do
             _ <- consumeTok
             parseSizeofExpression
 
+        Just TokenNullptr -> do
+            _ <- consumeTok
+            pure $ ASTNode ASTNullptr (PointerType VoidType)
+
         Just TokenReturnKeyword -> parseReturnStatement
         Just (TokenTypeKeyword _) -> parseVariableDeclaration
         Just TokenEnumKeyword -> parseVariableDeclaration

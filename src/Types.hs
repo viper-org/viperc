@@ -36,6 +36,10 @@ castLevel x y | x == y = Implicit
 castLevel x y | isIntegerType x && isIntegerType y = Implicit
 castLevel (PointerType VoidType) y | isPointerType y = Implicit
 castLevel x (PointerType VoidType) | isPointerType x = Implicit
+
+castLevel (PointerType _) y | isIntegerType y = Explicit
+castLevel x (PointerType _) | isIntegerType x = Explicit
+
 castLevel VoidType _ = Disallowed
 castLevel x y = Disallowed
 

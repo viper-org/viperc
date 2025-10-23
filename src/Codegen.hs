@@ -560,13 +560,25 @@ codegenNode (ASTNode (ASTUnaryExpression operator operand) ty') = do
 codegenNode (ASTNode (ASTSizeofType ty) _) = pure $ Some(L.int32 $ fromIntegral(typeBytes ty))
 codegenNode (ASTNode (ASTSizeofExpression e) _) = pure $ Some(L.int32 $ fromIntegral (typeBytes (ty e)))
 
+codegenNode (ASTNode ASTNullptr ty) = do
+    cast <- L.inttoptr (L.int64 0) (typeToLLVM ty)
+    pure (Some(cast))
+
 codegenNode (ASTNode (ASTNothing) _) = pure(None)
+
+-- Y -> void (discards the result of the expression)
+codegenNode (ASTNode (ASTCastExpression val Types.VoidType) _) = do
+    _ <- codegenNode val
+    pure (None)
 
 -- Y -> iX
 codegenNode (ASTNode (ASTCastExpression val toType) _) | isIntegerType toType = do
     val' <- codegenNode val
     let fromType = ty val
     if toType == fromType then pure val'
+    else if (isPointerType fromType) then do
+        cast <- L.ptrtoint (force val') (typeToLLVM toType)
+        pure (Some(cast))
     else if (typeSize toType) > (typeSize fromType) then do
         sext <- L.sext (force val') (typeToLLVM toType)
         pure (Some(sext))
@@ -574,6 +586,7 @@ codegenNode (ASTNode (ASTCastExpression val toType) _) | isIntegerType toType = 
         trunc <- L.trunc (force val') (typeToLLVM toType)
         pure (Some(trunc))
 
+-- Y -> X*
 codegenNode (ASTNode (ASTCastExpression val toType) _) | isPointerType toType = do
     val' <- codegenNode val
     let fromType = ty val
@@ -581,4 +594,7 @@ codegenNode (ASTNode (ASTCastExpression val toType) _) | isPointerType toType = 
     else if (isPointerType fromType) then do
         cast <- L.bitcast (force val') (typeToLLVM toType)
         pure (Some cast)
+    else if (isIntegerType fromType) then do
+        cast <- L.inttoptr (force val') (typeToLLVM toType)
+        pure (Some(cast))
     else pure(None)
