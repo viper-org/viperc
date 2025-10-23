@@ -213,7 +213,10 @@ typecheckNode (ASTNode (ASTSizeofExpression e) _) = do
 typecheckNode (ASTNode (ASTMemberAccess struct id isPointer) _) = do
     let struct' = typecheckNode struct
     let typ = (ty struct')
-    case typ of
+    let ty = case isPointer of
+            False -> typ
+            True -> getPointeeType typ
+    case ty of
         (StructType _ ps) -> do
             let m = find (matches id) ps
             case m of

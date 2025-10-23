@@ -7,6 +7,9 @@ struct Test { int a; char* b; } getTest();
 int main(int argc, char* argv[])
 {
     struct Test q;
+    struct Test* p = &q;
     q.a = 123;
-    return q.a;
+    p->a = 55;
+    printf("%d", q.a);
+    return 0;
 }

@@ -394,6 +394,7 @@ parseStructDeclaration name = do
 
 getBinaryOperatorPrecedence :: Token -> Parser Int
 getBinaryOperatorPrecedence TokenLeftParen = pure(90)
+getBinaryOperatorPrecedence TokenRightArrow = pure(90)
 getBinaryOperatorPrecedence TokenDot = pure(90)
 getBinaryOperatorPrecedence TokenLeftBracket = pure(90)
 getBinaryOperatorPrecedence TokenStar = pure(75)
@@ -505,6 +506,9 @@ parseExpr prec = do
                         else if op == TokenDot then do
                             (TokenIdentifier id) <- satisfyToken isIdentifier
                             parseBin $ ASTNode (ASTMemberAccess l id False) VoidType
+                        else if op == TokenRightArrow then do
+                            (TokenIdentifier id) <- satisfyToken isIdentifier
+                            parseBin $ ASTNode (ASTMemberAccess l id True) VoidType
                         else do
                             operator <- getBinaryOperator op
                             right <- parseExpr binaryPrec

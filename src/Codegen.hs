@@ -231,6 +231,13 @@ codegenNodeLVal (ASTNode (ASTMemberAccess struct id isPointer) _) = do
                 Just idx' -> do
                     gep <- L.gep struc [(L.int32 $ fromIntegral idx'), (L.int32 $ fromIntegral 0)]
                     pure gep
+        (Types.PointerType (StructType _ ps)) -> do
+            let idx = Data.List.findIndex (matches id) ps
+            case idx of
+                Just idx' -> do
+                    struc' <- L.load struc 0
+                    gep <- L.gep struc' [(L.int32 $ fromIntegral idx'), (L.int32 $ fromIntegral 0)]
+                    pure gep
 
     where
         matches id (id', _)= id == id'

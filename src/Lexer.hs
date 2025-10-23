@@ -53,6 +53,7 @@ data Token = None
     | TokenMinusEqual
     | TokenEllipsis
     | TokenDot
+    | TokenRightArrow
     deriving(Eq, Show)
 
 isType :: Token -> Bool
@@ -100,6 +101,7 @@ tokenize('<':'=':rest) = TokenLessEqual : tokenize rest
 tokenize('>':'=':rest) = TokenGreaterEqual : tokenize rest
 tokenize('&':'&':rest) = TokenDoubleAmpersand : tokenize rest
 tokenize('|':'|':rest) = TokenDoublePipe : tokenize rest
+tokenize('-':'>':rest) = TokenRightArrow : tokenize rest
 tokenize('<':rest) = TokenLessThan : tokenize rest
 tokenize('>':rest) = TokenGreaterThan : tokenize rest
 tokenize ('(':rest) = TokenLeftParen : tokenize rest
