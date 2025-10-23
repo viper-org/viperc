@@ -46,6 +46,9 @@ typeSize (PointerType _) = 64
 typeSize (ArrayType e n) = (typeSize e) * n
 typeSize (FunctionType _ _) = 0
 
+typeBytes :: Type -> Int
+typeBytes ty = (typeSize ty) `div` 8
+
 isIntegerType :: Type -> Bool
 isIntegerType CharType = True
 isIntegerType ShortType = True

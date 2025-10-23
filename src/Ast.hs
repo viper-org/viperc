@@ -52,6 +52,8 @@ data ASTNodeClass = ASTNothing
              | ASTUnaryExpression UnaryOperator ASTNode
              | ASTCallExpression Callee [Param]
              | ASTCastExpression ASTNode Type
+             | ASTSizeofExpression ASTNode
+             | ASTSizeofType Type
              deriving (Eq, Show)
 
 data ASTNode = ASTNode {

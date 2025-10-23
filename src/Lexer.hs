@@ -22,6 +22,7 @@ data Token = None
     | TokenSwitchKeyword
     | TokenCaseKeyword
     | TokenDefaultKeyword
+    | TokenSizeofKeyword
     | TokenIntegerLiteral String
     | TokenStringLiteral String
     | TokenCharLiteral Char
@@ -75,6 +76,7 @@ assignKeywords ((TokenIdentifier "continue"):xs) = TokenContinueKeyword       : 
 assignKeywords ((TokenIdentifier "switch"):xs)   = TokenSwitchKeyword         : assignKeywords xs
 assignKeywords ((TokenIdentifier "case"):xs)     = TokenCaseKeyword           : assignKeywords xs
 assignKeywords ((TokenIdentifier "default"):xs)  = TokenDefaultKeyword        : assignKeywords xs
+assignKeywords ((TokenIdentifier "sizeof"):xs)   = TokenSizeofKeyword         : assignKeywords xs
 assignKeywords (x:xs) = x : assignKeywords xs
 
 tokenize :: String -> [Token]

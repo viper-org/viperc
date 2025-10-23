@@ -483,6 +483,9 @@ codegenNode (ASTNode (ASTUnaryExpression operator operand) ty') = do
 
         _ -> error $ "unimplemented unary operator " ++ show operator
 
+codegenNode (ASTNode (ASTSizeofType ty) _) = pure $ Some(L.int32 $ fromIntegral(typeBytes ty))
+codegenNode (ASTNode (ASTSizeofExpression e) _) = pure $ Some(L.int32 $ fromIntegral (typeBytes (ty e)))
+
 codegenNode (ASTNode (ASTNothing) _) = pure(None)
 
 -- Y -> iX

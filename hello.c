@@ -7,5 +7,5 @@ int main(int argc, char** argv)
     x[argc] = 33;
     puts("Hello, world!");
 
-    return x[argc];
+    return sizeof(int);
 }

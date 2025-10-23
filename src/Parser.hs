@@ -371,6 +371,10 @@ parsePrimary = do
             _ <- expectToken TokenRightParen
             pure e
 
+        Just TokenSizeofKeyword -> do
+            _ <- consumeTok
+            parseSizeofExpression
+
         Just TokenReturnKeyword -> parseReturnStatement
         Just (TokenTypeKeyword _) -> parseVariableDeclaration
         Just TokenIfKeyword -> parseIfStatement
@@ -612,3 +616,17 @@ parseCompoundStatement = do
                         _ <- expectToken TokenSemicolon
                         rest <- parseMore
                         pure (curr : rest)
+
+parseSizeofExpression :: Parser ASTNode
+parseSizeofExpression = do
+    tok <- currentTok
+    case tok of
+        Just TokenLeftParen -> do
+            _ <- consumeTok
+            ty <- parseType
+            _ <- expectToken TokenRightParen
+            pure $ ASTNode (ASTSizeofType ty) IntType
+        
+        _ -> do
+            e <- parseExpr defaultPrecedence
+            pure $ ASTNode (ASTSizeofExpression e) IntType

@@ -185,4 +185,23 @@ typecheckNode (ASTNode (ASTCallExpression callee params) fnType) = do
                 ASTNode (ASTCastExpression p argT) argT
             else error $ "parameter with type '" ++ prettyPrint (ty p) ++ "' cannot cast to '" ++ prettyPrint argT ++ "'"
 
+typecheckNode (ASTNode (ASTSizeofExpression e) _) = do
+    let e' = typecheckNode e
+    ASTNode (ASTSizeofExpression e') IntType
+
+typecheckNode (ASTNode (ASTSwitchStatement val cases) ty') = do
+    let val' = typecheckNode val
+    let cases' = map typecheckCase cases
+    ASTNode (ASTSwitchStatement val' cases') ty'
+
+    where
+        typecheckCase (SwitchCase (Valued z) body) = do
+            let z' = typecheckNode z
+            let body' = map typecheckNode body
+            (SwitchCase (Valued z') body')
+
+        typecheckCase (SwitchCase Default body) = do
+            let body' = map typecheckNode body
+            (SwitchCase Default body')
+
 typecheckNode n = n
