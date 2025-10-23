@@ -189,7 +189,26 @@ parseParam = do
         _ -> do
             type' <- parseType
             (TokenIdentifier  parmName) <- satisfyToken isIdentifier
-            pure (type', parmName)
+            ty <- parseMoreType type'
+            pure (ty, parmName)
+
+            where
+                parseMoreType type' = do
+                    tok <- currentTok
+                    case tok of
+                        Just TokenLeftBracket -> do
+                            _ <- consumeTok
+                            tok <- currentTok
+                            case tok of
+                                Just TokenRightBracket -> do
+                                    _ <- consumeTok
+                                    parseMoreType $ PointerType type'
+                                Just (TokenIntegerLiteral _) -> do
+                                    _ <- consumeTok
+                                    _ <- expectToken TokenRightBracket
+                                    parseMoreType $ PointerType type'
+                                _ -> Parser $ \s -> Left $ "expected ']' to match '['"
+                        _ -> pure type'
 
 parseFunction :: Type -> String -> Parser ASTGlobal
 parseFunction type' name = do
