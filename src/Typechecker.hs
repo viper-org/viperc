@@ -216,7 +216,7 @@ typecheckNode (ASTNode (ASTMemberAccess struct id isPointer) _) = do
     let ty = case isPointer of
             False -> typ
             True -> getPointeeType typ
-    case ty of
+    case (decomposeType ty) of
         (StructType _ ps) -> do
             let m = find (matches id) ps
             case m of

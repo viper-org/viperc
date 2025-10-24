@@ -2,12 +2,12 @@ void puts(char* s);
 void putchar(char c);
 int printf(char* fmt, ...);
 
-struct Test { int a; char* b; } getTest();
+typedef struct Test { int a; char* b; } testt;
 
 int main(int argc, char* argv[])
 {
-    struct Test q;
-    struct Test* p = &q;
+    testt q;
+    testt* p = &q;
     q.a = 123;
     p->a = 55;
     printf("%d", q.a);

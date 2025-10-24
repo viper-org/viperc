@@ -67,6 +67,7 @@ data ASTGlobal = ASTFunction FunctionDef
                | ASTGlobalVar Type String InitialValue
                | ASTEnum EnumDef
                | ASTStruct StructDef
+               | ASTTypedef Type String
     deriving (Eq, Show)
 
 data EnumDef = EnumDef {

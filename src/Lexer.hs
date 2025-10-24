@@ -7,6 +7,7 @@ data Token = None
     | TokenTypeKeyword String
     | TokenEnumKeyword
     | TokenStructKeyword
+    | TokenTypedefKeyword
     | TokenIdentifier String
     | TokenLeftParen
     | TokenRightParen
@@ -64,6 +65,10 @@ isIdentifier :: Token -> Bool
 isIdentifier (TokenIdentifier _) = True
 isIdentifier _ = False;
 
+isIntegerLiteral :: Token -> Bool
+isIntegerLiteral (TokenIntegerLiteral _) = True
+isIntegerLiteral _ = False
+
 assignKeywords :: [Token] -> [Token]
 assignKeywords [] = []
 assignKeywords ((TokenIdentifier "char"):xs)     = TokenTypeKeyword ("char")  : assignKeywords xs
@@ -73,6 +78,8 @@ assignKeywords ((TokenIdentifier "long"):xs)     = TokenTypeKeyword ("long")  : 
 assignKeywords ((TokenIdentifier "void"):xs)     = TokenTypeKeyword ("void")  : assignKeywords xs
 assignKeywords ((TokenIdentifier "bool"):xs)     = TokenTypeKeyword ("bool")  : assignKeywords xs
 assignKeywords ((TokenIdentifier "enum"):xs)     = TokenEnumKeyword           : assignKeywords xs
+assignKeywords ((TokenIdentifier "struct"):xs)   = TokenStructKeyword         : assignKeywords xs
+assignKeywords ((TokenIdentifier "typedef"):xs)  = TokenTypedefKeyword        : assignKeywords xs
 assignKeywords ((TokenIdentifier "return"):xs)   = TokenReturnKeyword         : assignKeywords xs
 assignKeywords ((TokenIdentifier "if"):xs)       = TokenIfKeyword             : assignKeywords xs
 assignKeywords ((TokenIdentifier "else"):xs)     = TokenElseKeyword           : assignKeywords xs
@@ -85,7 +92,6 @@ assignKeywords ((TokenIdentifier "case"):xs)     = TokenCaseKeyword           : 
 assignKeywords ((TokenIdentifier "default"):xs)  = TokenDefaultKeyword        : assignKeywords xs
 assignKeywords ((TokenIdentifier "sizeof"):xs)   = TokenSizeofKeyword         : assignKeywords xs
 assignKeywords ((TokenIdentifier "nullptr"):xs)  = TokenNullptr               : assignKeywords xs
-assignKeywords ((TokenIdentifier "struct"):xs)   = TokenStructKeyword         : assignKeywords xs
 assignKeywords (x:xs) = x : assignKeywords xs
 
 tokenize :: String -> [Token]

@@ -13,7 +13,8 @@ data ParserState = ParserState {
     tokens :: [Token],
     currentReturnType :: Type,
     extraGlobals :: [ASTGlobal], -- enums and stuff
-    symbols :: Map String Type -- maybe make this a proper symbol type later
+    symbols :: Map String Type, -- maybe make this a proper symbol type later
+    typedefs :: Map String Type
 } deriving (Eq, Show)
 
 newtype Parser a = Parser
@@ -48,17 +49,29 @@ getCurrentReturnType = Parser $ \s ->
     case currentReturnType s of
         x -> Right(x, s)
 
-getSymbols :: Parser (Map String Type)
+getSymbols :: Parser (Map String Type, Map String Type)
 getSymbols = Parser $ \s ->
     case symbols s of
-        (xs) -> Right(xs, s)
+        (ys) -> case typedefs s of
+                (xs) -> Right((ys, xs), s)
 
 getSymbol :: String -> Parser Type
 getSymbol ident = do
-    syms <- getSymbols
+    (syms, _) <- getSymbols
     case Map.lookup ident syms of
         Just sym -> pure sym
         Nothing -> Parser $ \s -> Left $ "Could not find symbol '" ++ ident ++ "'"
+
+getTypedef :: String -> Parser Type
+getTypedef ident = do
+    (_, typs) <- getSymbols
+    case Map.lookup ident typs of
+        Just sym -> pure sym
+        Nothing -> Parser $ \s -> Left $ "Could not find typedef '" ++ ident ++ "'"
+
+addTypedef :: String -> Type -> Parser ()
+addTypedef name type' = Parser $ \s ->
+    Right((), s { typedefs = Map.insert name type' (typedefs s) })
 
 addSymbol :: String -> Type -> Parser ()
 addSymbol name type' = Parser $ \s ->
@@ -71,9 +84,9 @@ addExtraGlobal :: ASTGlobal -> Parser ()
 addExtraGlobal glob = Parser $ \s ->
     Right((), s { extraGlobals = (extraGlobals s) ++ [glob] })
 
-setSymbols :: Map String Type -> Parser()
-setSymbols m = Parser $ \s ->
-    Right((), s { symbols = m })
+setSymbols :: (Map String Type, Map String Type) -> Parser()
+setSymbols (s', t) = Parser $ \s ->
+    Right((), s { symbols = s', typedefs = t })
 
 consumeTok :: Parser Token
 consumeTok = Parser $ \s ->
@@ -97,7 +110,7 @@ satisfyToken :: (Token -> Bool) -> Parser Token
 satisfyToken pred = do
     t <- consumeTok
     if pred t then pure t
-    else Parser $ \s -> Left $ "Unexpected token" -- Todo: better error
+    else Parser $ \s -> Left $ "Unexpected token " ++ show t -- Todo: better error
 
 expectToken :: Token -> Parser ()
 expectToken z = do
@@ -145,6 +158,14 @@ parseType = do
                     ty <- getSymbol ident
                     parseMore ty
 
+        Just TokenTypedefKeyword -> do
+            _ <- consumeTok
+            ty <- parseType
+            (TokenIdentifier name) <- satisfyToken isIdentifier
+            ty' <- parseMoreTypedef ty
+            addTypedef name ty'
+            pure $ AliasType name ty'
+
         Just (TokenTypeKeyword name) -> do
             _ <- consumeTok
             case name of
@@ -154,6 +175,11 @@ parseType = do
                 "long"  -> parseMore(LongType)
                 "void"  -> parseMore(VoidType)
                 "bool"  -> parseMore(BoolType)
+
+        Just (TokenIdentifier id) -> do
+            _ <- consumeTok
+            ty <- getTypedef id
+            parseMore ty
 
         _ -> Parser $ \s -> Left $ "expected a type"
             
@@ -165,6 +191,15 @@ parseType = do
                         _ <- consumeTok
                         parseMore $ PointerType type'
                     _ -> pure (type')
+            parseMoreTypedef ty = do
+                tok <- currentTok
+                case tok of
+                    Just TokenLeftBracket -> do
+                        _ <- consumeTok
+                        (TokenIntegerLiteral s) <- satisfyToken isIntegerLiteral
+                        _ <- expectToken TokenRightBracket
+                        parseMore $ ArrayType ty (read s :: Int)
+                    _ -> pure ty
 
 parseFile :: Parser [ASTGlobal]
 parseFile = do
@@ -355,9 +390,6 @@ parseEnumDeclaration name = do
                         pure (curr : more)
 
         addEnumSymbol enumType (ident,_) = addSymbol ident enumType
-
-        isIntegerLiteral (TokenIntegerLiteral _) = True
-        isIntegerLiteral _ = False
 
 parseStructDeclaration :: String -> Parser ASTGlobal
 parseStructDeclaration name = do
@@ -652,9 +684,6 @@ parseVariableDeclaration type' = do
                 _ -> do
                     addSymbol name type'
                     pure $ ASTNode (ASTVariableDeclaration type' name (ASTNode ASTNothing VoidType)) type'
-
-        isIntegerLiteral (TokenIntegerLiteral _) = True
-        isIntegerLiteral _ = False
 
 parseIfStatement :: Parser ASTNode
 parseIfStatement = do

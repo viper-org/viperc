@@ -15,6 +15,14 @@ data Type = VoidType | CharType | ShortType | IntType | LongType | BoolType
           | AliasType String Type
     deriving (Show)
 
+decomposeType :: Type -> Type
+decomposeType (PointerType p) = PointerType $ decomposeType p
+decomposeType (ArrayType t n) = ArrayType (decomposeType t) n
+decomposeType (StructType n ps) = StructType n [(s, decomposeType t) | (s, t) <- ps]
+decomposeType (FunctionType r ps) = FunctionType r [decomposeType t | t <- ps]
+decomposeType (AliasType _ t) = t
+decomposeType t = t
+
 instance Eq Type where
     (VoidType) == (VoidType) = True
     (CharType) == (CharType) = True
