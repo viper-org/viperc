@@ -128,7 +128,7 @@ tokenize ('&':rest) = TokenAmpersand : tokenize rest
 tokenize ('!':rest) = TokenBang : tokenize rest
 tokenize ('.':rest) = TokenDot : tokenize rest
 -- Keywords will be transformed afterwards
-tokenize (c:rest) | isAlpha c = TokenIdentifier(c:takeWhile isAlphaNum rest) : tokenize (dropWhile isAlphaNum rest)
+tokenize (c:rest) | (isAlpha c || c == '_') = TokenIdentifier(c:takeWhile isIdentifierChar rest) : tokenize (dropWhile isIdentifierChar rest)
                   | isDigit c = TokenIntegerLiteral(c:takeWhile isDigit rest) : tokenize (dropWhile isDigit rest)
                   | isSpace c = tokenize (dropWhile isSpace rest)
 tokenize('"':rest) = do
@@ -136,3 +136,6 @@ tokenize('"':rest) = do
     TokenStringLiteral val : tokenize (drop 1 (dropWhile (/='"') rest))
 tokenize('\'':c:'\'':rest) = TokenCharLiteral(c) : tokenize rest
 tokenize s = [TokenError(head s)]
+
+isIdentifierChar :: Char -> Bool
+isIdentifierChar z = isAlphaNum z || z == '_'

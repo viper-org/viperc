@@ -4,15 +4,15 @@ int printf(char* fmt, ...);
 
 enum { XXX = 55 };
 
-typedef struct { int a; char* b; } testt;
+typedef struct { int a; char* b; } test_t;
 
 int main(int argc, char* argv[])
 {
-    testt q;
-    testt* p = &q;
+    test_t q;
+    test_t* p = &q;
     q.a = 123;
     p->a = XXX;
-    p = (testt*)0;
+    p = (test_t*)0;
     printf("%d", q.a);
     return sizeof((char)q.a);
 }
