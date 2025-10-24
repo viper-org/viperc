@@ -132,10 +132,25 @@ tokenize (c:rest) | (isAlpha c || c == '_') = TokenIdentifier(c:takeWhile isIden
                   | isDigit c = TokenIntegerLiteral(c:takeWhile isDigit rest) : tokenize (dropWhile isDigit rest)
                   | isSpace c = tokenize (dropWhile isSpace rest)
 tokenize('"':rest) = do
-    let val = takeWhile (/='"') rest
-    TokenStringLiteral val : tokenize (drop 1 (dropWhile (/='"') rest))
+    let (str, rest') = parseStringLiteral "" rest
+    TokenStringLiteral(str) : tokenize rest'
+tokenize('\'':'\\':'n':'\'':rest) = TokenCharLiteral('\n') : tokenize rest
+tokenize('\'':'\\':'0':'\'':rest) = TokenCharLiteral('\0') : tokenize rest
+tokenize('\'':'\\':'"':'\'':rest) = TokenCharLiteral('"') : tokenize rest
+tokenize('\'':'\\':'\'':'\'':rest) = TokenCharLiteral('\'') : tokenize rest
+tokenize('\'':'\\':'\\':'\'':rest) = TokenCharLiteral('\\') : tokenize rest
 tokenize('\'':c:'\'':rest) = TokenCharLiteral(c) : tokenize rest
 tokenize s = [TokenError(head s)]
 
 isIdentifierChar :: Char -> Bool
 isIdentifierChar z = isAlphaNum z || z == '_'
+
+parseStringLiteral :: String -> String -> (String, String) -- current string -> rest of text -> (string literal, rest of text)
+parseStringLiteral s ('"':rest) = (s, rest)
+parseStringLiteral s ('\\':'n':rest) = parseStringLiteral (s++"\n") rest
+parseStringLiteral s ('\\':'0':rest) = parseStringLiteral (s++"\0") rest
+parseStringLiteral s ('\\':'"':rest) = parseStringLiteral (s++"\"") rest
+parseStringLiteral s ('\\':'\'':rest) = parseStringLiteral (s++"'") rest
+parseStringLiteral s ('\\':'\\':rest) = parseStringLiteral (s++"\\") rest
+parseStringLiteral s (c:rest) = parseStringLiteral (s++[c]) rest
+parseStringLiteral s [] = error $ "expected \" to match \""
