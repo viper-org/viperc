@@ -52,6 +52,8 @@ data Token = None
     | TokenGreaterEqual
     | TokenPlusEqual
     | TokenMinusEqual
+    | TokenStarEqual
+    | TokenSlashEqual
     | TokenEllipsis
     | TokenDot
     | TokenRightArrow
@@ -103,6 +105,8 @@ tokenize('+':'=':rest) = TokenPlusEqual : tokenize rest
 tokenize('+':'+':rest) = TokenDoublePlus : tokenize rest
 tokenize('-':'-':rest) = TokenDoubleMinus : tokenize rest
 tokenize('-':'=':rest) = TokenMinusEqual : tokenize rest
+tokenize('*':'=':rest) = TokenStarEqual : tokenize rest
+tokenize('/':'=':rest) = TokenSlashEqual : tokenize rest
 tokenize('<':'=':rest) = TokenLessEqual : tokenize rest
 tokenize('>':'=':rest) = TokenGreaterEqual : tokenize rest
 tokenize('&':'&':rest) = TokenDoubleAmpersand : tokenize rest

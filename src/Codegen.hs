@@ -474,17 +474,6 @@ codegenNode (ASTNode (ASTBinaryExpression l op r) ty') = do
                             else if (isPointerType $ ty r) then L.gep right' [left']
                             else L.add left' right'
                             pure(Some(op'))
-                        BinaryAddAssign -> do
-                            op' <- if (isPointerType $ ty l) then L.gep left' [right']
-                            else L.add left' right'
-                            loc <- codegenNodeLVal l
-                            _ <- L.store loc 0 op'
-                            pure(None)
-                        BinarySubAssign -> do
-                            op' <- L.sub left' right'
-                            loc <- codegenNodeLVal l
-                            _ <- L.store loc 0 op'
-                            pure(None)
                         BinarySub -> do
                             op' <- L.sub left' right'
                             pure(Some(op'))

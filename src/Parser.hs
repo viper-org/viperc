@@ -480,6 +480,8 @@ getBinaryOperatorPrecedence TokenDoubleAmpersand = pure(30)
 getBinaryOperatorPrecedence TokenDoublePipe = pure(25)
 getBinaryOperatorPrecedence TokenPlusEqual = pure(20)
 getBinaryOperatorPrecedence TokenMinusEqual = pure(20)
+getBinaryOperatorPrecedence TokenStarEqual = pure(20)
+getBinaryOperatorPrecedence TokenSlashEqual = pure(20)
 getBinaryOperatorPrecedence TokenEqual = pure(20)
 getBinaryOperatorPrecedence _ = pure(0)
 
@@ -496,10 +498,19 @@ getBinaryOperator TokenLessEqual = pure(BinaryLessEqual)
 getBinaryOperator TokenGreaterEqual = pure(BinaryGreaterEqual)
 getBinaryOperator TokenDoubleAmpersand = pure(LogicalAnd)
 getBinaryOperator TokenDoublePipe = pure(LogicalOr)
-getBinaryOperator TokenPlusEqual = pure(BinaryAddAssign)
-getBinaryOperator TokenMinusEqual = pure(BinarySubAssign)
+getBinaryOperator TokenPlusEqual = pure(BinaryCompound)
+getBinaryOperator TokenMinusEqual = pure(BinaryCompound)
+getBinaryOperator TokenStarEqual = pure(BinaryCompound)
+getBinaryOperator TokenSlashEqual = pure(BinaryCompound)
 getBinaryOperator TokenEqual = pure(BinaryAssign)
 getBinaryOperator z = Parser $ \s -> Left $ "unexpected attempt to get binary operator " ++ show z
+
+getBinaryCompoundOperator :: Token -> Parser BinaryOperator
+getBinaryCompoundOperator TokenPlusEqual = pure(BinaryAdd)
+getBinaryCompoundOperator TokenMinusEqual = pure(BinarySub)
+getBinaryCompoundOperator TokenStarEqual = pure(BinaryMul)
+getBinaryCompoundOperator TokenSlashEqual = pure(BinaryDiv)
+getBinaryCompoundOperator z = Parser $ \s -> Left $ "unexpected attempt to get binary compound operator " ++ show z
 
 getPrefixUnaryOperatorPrecedence :: Token -> Parser Int
 getPrefixUnaryOperatorPrecedence TokenAmpersand = pure(85)
@@ -595,7 +606,11 @@ parseExpr prec = do
                         else do
                             operator <- getBinaryOperator op
                             right <- parseExpr binaryPrec
-                            parseBin $ ASTNode (ASTBinaryExpression l operator right) (ty l)
+                            if operator == BinaryCompound then do
+                                compound <- getBinaryCompoundOperator op
+                                let e = ASTNode (ASTBinaryExpression l compound right) (ty l)
+                                parseBin $ ASTNode (ASTBinaryExpression l BinaryAssign e) (ty l)
+                            else parseBin $ ASTNode (ASTBinaryExpression l operator right) (ty l)
 
 parsePrimary :: Parser ASTNode
 parsePrimary = do

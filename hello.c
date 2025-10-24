@@ -8,11 +8,11 @@ typedef struct { int a; char* b; } test_t;
 
 int main(int argc, char* argv[])
 {
-    test_t q;
-    test_t* p = &q;
-    q.a = 123;
-    p->a = XXX;
-    p = (test_t*)0;
-    printf("q.a =" " %d" "\n", q.a);
-    return sizeof((char)q.a);
+    int a[2][2];
+    a[0][0] = 1;
+    a[1][1] = 5;
+    a[1][1] *= 5;
+
+    printf("%d", a[1][1]);
+    return 0;
 }

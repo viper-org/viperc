@@ -19,7 +19,7 @@ data BinaryOperator = BinaryAdd | BinarySub | BinaryMul | BinaryDiv
                     | BinaryIndex
                     | LogicalAnd | LogicalOr
                     | BinaryAssign
-                    | BinaryAddAssign | BinarySubAssign
+                    | BinaryCompound -- placeholder for decomposing into two operations
     deriving (Eq, Show)
 
 data UnaryOperator = UnaryRef | UnaryIndirect

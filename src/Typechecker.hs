@@ -152,21 +152,15 @@ typecheckNode (ASTNode (ASTBinaryExpression l op r) ty') = do
             BinaryGreaterEqual -> BoolType
             _ -> lType
 
-    case op of
-        BinaryAddAssign -> do
-            if isPointerType lType && isIntegerType rType then (ASTNode (ASTBinaryExpression l' op r') lType)
-            else if lType == rType && isIntegerType lType then (ASTNode (ASTBinaryExpression l' op r') lType)
-            else error $ "binary expression has differing types " ++ prettyPrint lType ++ " and " ++ prettyPrint rType
-        _ -> do
-            if lType == rType then (ASTNode (ASTBinaryExpression l' op r') destType)
-            else if (castLevel lType rType) == Implicit then
-                if typeSize lType > typeSize rType then
-                    ASTNode (ASTBinaryExpression l' op (ASTNode (ASTCastExpression r' lType) lType)) destType
-                else if destType == lType then
-                    ASTNode (ASTBinaryExpression (ASTNode (ASTCastExpression l' rType) rType) op r') rType
-                else
-                    ASTNode (ASTBinaryExpression (ASTNode (ASTCastExpression l' rType) rType) op r') destType
-            else error $ "binary expression has differing types " ++ prettyPrint lType ++ " and " ++ prettyPrint rType
+    if lType == rType then (ASTNode (ASTBinaryExpression l' op r') destType)
+    else if (castLevel lType rType) == Implicit then
+        if typeSize lType > typeSize rType then
+            ASTNode (ASTBinaryExpression l' op (ASTNode (ASTCastExpression r' lType) lType)) destType
+        else if destType == lType then
+            ASTNode (ASTBinaryExpression (ASTNode (ASTCastExpression l' rType) rType) op r') rType
+        else
+            ASTNode (ASTBinaryExpression (ASTNode (ASTCastExpression l' rType) rType) op r') destType
+    else error $ "binary expression has differing types " ++ prettyPrint lType ++ " and " ++ prettyPrint rType
 
 -- todo: actually check types are valid for each op
 typecheckNode (ASTNode (ASTUnaryExpression op val) ty') = do
