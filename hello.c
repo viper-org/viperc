@@ -12,6 +12,7 @@ int main(int argc, char* argv[])
     testt* p = &q;
     q.a = 123;
     p->a = XXX;
+    p = (testt*)0;
     printf("%d", q.a);
-    return sizeof(q.a);
+    return sizeof((char)q.a);
 }

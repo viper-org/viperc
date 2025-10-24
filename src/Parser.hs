@@ -508,6 +508,7 @@ getPrefixUnaryOperatorPrecedence TokenMinus = pure(85)
 getPrefixUnaryOperatorPrecedence TokenDoublePlus = pure(85)
 getPrefixUnaryOperatorPrecedence TokenDoubleMinus = pure(85)
 getPrefixUnaryOperatorPrecedence TokenBang = pure(85)
+getPrefixUnaryOperatorPrecedence TokenLeftParen = pure(85) -- cast operator
 getPrefixUnaryOperatorPrecedence _ = pure(0)
 
 getPrefixUnaryOperator :: Token -> Parser UnaryOperator
@@ -536,10 +537,23 @@ parseExpr prec = do
         Just op -> do
             unaryPrec <- getPrefixUnaryOperatorPrecedence op
             if unaryPrec >= prec then do
-                _ <- consumeTok
-                operand <- parseExpr unaryPrec
-                operator <- getPrefixUnaryOperator op
-                pure $ ASTNode (ASTUnaryExpression operator operand) (ty operand)
+                if op == TokenLeftParen then do
+                    _ <- consumeTok
+                    ty <- tryParseType
+                    case ty of
+                        Nothing -> do -- parenthesized expression
+                            e <- parseExpr defaultPrecedence
+                            _ <- expectToken TokenRightParen
+                            pure e
+                        Just ty -> do
+                            _ <- expectToken TokenRightParen
+                            operand <- parseExpr unaryPrec
+                            pure $ ASTNode (ASTCastExpression operand ty) ty
+                else do
+                    _ <- consumeTok
+                    operand <- parseExpr unaryPrec
+                    operator <- getPrefixUnaryOperator op
+                    pure $ ASTNode (ASTUnaryExpression operator operand) (ty operand)
             else parsePrimary
     post <- parsePost left
     parseBin post
