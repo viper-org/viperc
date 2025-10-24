@@ -40,6 +40,11 @@ instance Monad Parser where
 instance MonadFail Parser where
   fail msg = Parser $ \s -> Left msg
 
+getNTokens :: Parser Int
+getNTokens = Parser $ \s ->
+    case tokens s of
+        z -> Right(length z, s)
+
 setReturnType :: Type -> Parser()
 setReturnType t = Parser $ \s ->
     Right((), s { currentReturnType = t })
@@ -134,29 +139,51 @@ parseType = do
         Nothing -> Parser $ \s -> Left $ "expected a type"
         Just TokenEnumKeyword -> do
             _ <- consumeTok
-            (TokenIdentifier ident) <- satisfyToken isIdentifier
             tok <- currentTok
             case tok of
+                Just (TokenIdentifier ident) -> do
+                    _ <- consumeTok
+                    tok <- currentTok
+                    case tok of
+                        Just TokenLeftBrace -> do
+                            parseEnumDeclaration ident
+                            ty <- getSymbol ident
+                            parseMore ty
+                        _ -> do
+                            ty <- getSymbol ident
+                            parseMore ty
                 Just TokenLeftBrace -> do
-                    parseEnumDeclaration ident
-                    ty <- getSymbol ident
-                    parseMore ty
-                _ -> do
-                    ty <- getSymbol ident
+                    -- generate a random name for the enum (hopefully it's unique)
+                    nToks <- getNTokens
+                    let anonName = "$anonymous enum" ++ show nToks
+                    parseEnumDeclaration anonName
+                    ty <- getSymbol anonName
                     parseMore ty
 
         Just TokenStructKeyword -> do
             _ <- consumeTok
-            (TokenIdentifier ident) <- satisfyToken isIdentifier
             tok <- currentTok
             case tok of
+                Just (TokenIdentifier ident) -> do
+                    _ <- consumeTok
+                    tok <- currentTok
+                    case tok of
+                        Just TokenLeftBrace -> do
+                            parseStructDeclaration ident
+                            ty <- getSymbol ident
+                            parseMore ty
+                        _ -> do
+                            ty <- getSymbol ident
+                            parseMore ty
                 Just TokenLeftBrace -> do
-                    parseStructDeclaration ident
-                    ty <- getSymbol ident
+                    -- generate a random name for the struct (hopefully it's unique)
+                    nToks <- getNTokens
+                    let anonName = "$anonymous struct" ++ show nToks
+                    parseStructDeclaration anonName
+                    ty <- getSymbol anonName
                     parseMore ty
-                _ -> do
-                    ty <- getSymbol ident
-                    parseMore ty
+
+                _ -> Parser $ \s -> Left $ "expected an identifier or '{'"
 
         Just TokenTypedefKeyword -> do
             _ <- consumeTok
@@ -343,7 +370,7 @@ parseEnumDeclaration name = do
 
     let enumType = AliasType ("enum " ++ name) baseType
 
-    addSymbol name enumType
+    addSymbol name baseType
     
     _ <- expectToken TokenLeftBrace
     tok <- currentTok
@@ -362,7 +389,7 @@ parseEnumDeclaration name = do
                 else pure 0
             let curr = (ident, val)
             more <- parseMore val
-            mapM_ (addEnumSymbol enumType) (curr : more)
+            mapM_ (addEnumSymbol baseType) (curr : more)
             _ <- expectToken TokenRightBrace
             let g = ASTEnum (EnumDef name enumType (curr : more))
             addExtraGlobal g
@@ -389,7 +416,7 @@ parseEnumDeclaration name = do
                         more <- parseMore val
                         pure (curr : more)
 
-        addEnumSymbol enumType (ident,_) = addSymbol ident enumType
+        addEnumSymbol baseType (ident,_) = addSymbol ident baseType
 
 parseStructDeclaration :: String -> Parser ASTGlobal
 parseStructDeclaration name = do
