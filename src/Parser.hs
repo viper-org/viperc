@@ -619,9 +619,7 @@ parsePrimary = do
                     ty <- getSymbol s
                     pure $ ASTNode (ASTVariableExpression s) ty
 
-                Just (TokenStringLiteral s) -> do
-                    _ <- consumeTok
-                    pure $ ASTNode (ASTStringLiteral s) (PointerType CharType)
+                Just (TokenStringLiteral _) -> Parser.parseStringLiteral
 
                 Just TokenLeftParen -> do
                     _ <- consumeTok
@@ -679,6 +677,24 @@ parseCallExpression callee = do
                         rest <- parseMore
                         pure (curr : rest)
                     _ -> Parser $ \s -> Left $ "Expected ')' to match '('"
+
+parseStringLiteral :: Parser ASTNode
+parseStringLiteral = do
+    (TokenStringLiteral s) <- satisfyToken isStringLiteral
+    fullString <- parseMore s
+    pure $ ASTNode (ASTStringLiteral fullString) (PointerType CharType)
+
+    where
+        parseMore s = do
+            tok <- currentTok
+            case tok of
+                Just (TokenStringLiteral s') -> do
+                    _ <- consumeTok
+                    fullString <- parseMore $ s ++ s'
+                    pure fullString
+                _ -> pure s
+        isStringLiteral (TokenStringLiteral _) = True
+        isStringLiteral _ = False
 
 parseIndexExpression :: ASTNode -> Parser ASTNode
 parseIndexExpression left = do
