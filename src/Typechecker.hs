@@ -172,6 +172,8 @@ typecheckNode (ASTNode (ASTUnaryExpression op val) ty') = do
         UnaryMinus  -> ASTNode (ASTUnaryExpression op val') (ty val')
 
         LogicalNot -> ASTNode (ASTUnaryExpression op val') BoolType
+
+        UnaryNot -> ASTNode (ASTUnaryExpression op val') (ty val')
         
         PrefixInc  -> ASTNode (ASTUnaryExpression op val') (ty val')
         PrefixDec  -> ASTNode (ASTUnaryExpression op val') (ty val')

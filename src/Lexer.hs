@@ -38,13 +38,19 @@ data Token = None
     | TokenMinus
     | TokenStar
     | TokenSlash
+    | TokenPercent
     | TokenDoublePlus
     | TokenDoubleMinus
     | TokenBang
     | TokenAmpersand
+    | TokenTilde
     | TokenDoubleAmpersand
     | TokenDoublePipe
     | TokenDoubleEqual
+    | TokenDoubleLessThan
+    | TokenDoubleGreaterThan
+    | TokenPipe
+    | TokenCaret
     | TokenBangEqual
     | TokenLessThan
     | TokenGreaterThan
@@ -54,6 +60,12 @@ data Token = None
     | TokenMinusEqual
     | TokenStarEqual
     | TokenSlashEqual
+    | TokenPercentEqual
+    | TokenAmpersandEqual
+    | TokenPipeEqual
+    | TokenCaretEqual
+    | TokenDoubleGreaterThanEqual
+    | TokenDoubleLessThanEqual
     | TokenEllipsis
     | TokenDot
     | TokenRightArrow
@@ -99,14 +111,22 @@ assignKeywords (x:xs) = x : assignKeywords xs
 tokenize :: String -> [Token]
 tokenize [] = []
 tokenize('.':'.':'.':rest) = TokenEllipsis : tokenize rest
+tokenize('>':'>':'=':rest) = TokenDoubleGreaterThanEqual : tokenize rest
+tokenize('<':'<':'=':rest) = TokenDoubleLessThanEqual : tokenize rest
 tokenize('=':'=':rest) = TokenDoubleEqual : tokenize rest
 tokenize('!':'=':rest) = TokenBangEqual : tokenize rest
+tokenize('>':'>':rest) = TokenDoubleGreaterThan : tokenize rest
+tokenize('<':'<':rest) = TokenDoubleLessThan : tokenize rest
 tokenize('+':'=':rest) = TokenPlusEqual : tokenize rest
 tokenize('+':'+':rest) = TokenDoublePlus : tokenize rest
 tokenize('-':'-':rest) = TokenDoubleMinus : tokenize rest
 tokenize('-':'=':rest) = TokenMinusEqual : tokenize rest
 tokenize('*':'=':rest) = TokenStarEqual : tokenize rest
 tokenize('/':'=':rest) = TokenSlashEqual : tokenize rest
+tokenize('%':'=':rest) = TokenPercentEqual : tokenize rest
+tokenize('&':'=':rest) = TokenAmpersandEqual : tokenize rest
+tokenize('|':'=':rest) = TokenPipeEqual : tokenize rest
+tokenize('^':'=':rest) = TokenCaretEqual : tokenize rest
 tokenize('<':'=':rest) = TokenLessEqual : tokenize rest
 tokenize('>':'=':rest) = TokenGreaterEqual : tokenize rest
 tokenize('&':'&':rest) = TokenDoubleAmpersand : tokenize rest
@@ -128,8 +148,12 @@ tokenize ('+':rest) = TokenPlus : tokenize rest
 tokenize ('-':rest) = TokenMinus : tokenize rest
 tokenize ('*':rest) = TokenStar : tokenize rest
 tokenize ('/':rest) = TokenSlash : tokenize rest
+tokenize ('%':rest) = TokenPercent : tokenize rest
 tokenize ('&':rest) = TokenAmpersand : tokenize rest
+tokenize ('~':rest) = TokenTilde : tokenize rest
 tokenize ('!':rest) = TokenBang : tokenize rest
+tokenize ('|':rest) = TokenPipe : tokenize rest
+tokenize ('^':rest) = TokenCaret : tokenize rest
 tokenize ('.':rest) = TokenDot : tokenize rest
 -- Keywords will be transformed afterwards
 tokenize (c:rest) | (isAlpha c || c == '_') = TokenIdentifier(c:takeWhile isIdentifierChar rest) : tokenize (dropWhile isIdentifierChar rest)

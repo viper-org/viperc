@@ -14,16 +14,19 @@ type Right = ASTNode
 type Callee = ASTNode
 type Param = ASTNode
 
-data BinaryOperator = BinaryAdd | BinarySub | BinaryMul | BinaryDiv
+data BinaryOperator = BinaryAdd | BinarySub | BinaryMul | BinaryDiv | BinaryRem
                     | BinaryEqual | BinaryNotEqual | BinaryLessThan | BinaryGreaterThan | BinaryLessEqual | BinaryGreaterEqual
                     | BinaryIndex
                     | LogicalAnd | LogicalOr
+                    | BinaryAnd | BinaryOr | BinaryXor -- bitwise ops
+                    | ShiftLeft | ShiftRight
                     | BinaryAssign
                     | BinaryCompound -- placeholder for decomposing into two operations
     deriving (Eq, Show)
 
 data UnaryOperator = UnaryRef | UnaryIndirect
                    | UnaryMinus | LogicalNot
+                   | UnaryNot -- bitwise not
                    | PrefixInc | PrefixDec | PostfixInc | PostfixDec
     deriving (Eq, Show)
 

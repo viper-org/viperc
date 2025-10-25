@@ -483,6 +483,26 @@ codegenNode (ASTNode (ASTBinaryExpression l op r) ty') = do
                         BinaryDiv -> do
                             op' <- L.sdiv left' right'
                             pure(Some(op'))
+                        BinaryRem -> do
+                            op' <- L.srem left' right'
+                            pure(Some(op'))
+
+                        BinaryAnd -> do
+                            op' <- L.and left' right'
+                            pure(Some(op'))
+                        BinaryOr -> do
+                            op' <- L.or left' right'
+                            pure(Some(op'))
+                        BinaryXor -> do
+                            op' <- L.xor left' right'
+                            pure(Some(op'))
+                            
+                        ShiftLeft -> do
+                            op' <- L.shl left' right'
+                            pure(Some(op'))
+                        ShiftRight -> do
+                            op' <- L.ashr left' right'
+                            pure(Some(op'))
 
                         BinaryEqual -> do
                             op' <- L.icmp L.EQ left' right'
@@ -537,6 +557,11 @@ codegenNode (ASTNode (ASTUnaryExpression operator operand) ty') = do
             op <- codegenNode operand
             neg <- L.sub (L.int32 0) (force op)
             pure (Some(neg))
+
+        UnaryNot -> do
+            op <- codegenNode operand
+            not <- L.xor (force op) (L.int64 (-1)) -- llvm-hs doesnt have not so this is an equivalent operation
+            pure (Some(not))
 
         PrefixInc -> do
             op <- codegenNode operand
